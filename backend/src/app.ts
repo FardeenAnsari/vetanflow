@@ -33,6 +33,7 @@ export function createApp() {
   app.use(express.json({ limit: '100kb' }))
 
   app.use('/health', healthRouter)
+  app.use('/api/health', healthRouter)
   app.use('/api', apiRateLimiter)
   app.use('/api/attendance', createAttendanceRouter())
   app.use('/api/employees', createEmployeesRouter())

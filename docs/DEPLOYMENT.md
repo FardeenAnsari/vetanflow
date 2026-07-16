@@ -154,7 +154,7 @@ Recommended setup:
 
 After deployment:
 
-1. `GET /health` returns `200` and `ok: true`.
+1. `GET /api/health` returns `200` and `ok: true` on the same-origin Vercel deployment. The standalone Render service also exposes `/health`.
 2. `/`, `/tour`, `/how-it-works`, `/blog`, `/terms`, `/privacy`, and `/licenses` load directly and after refresh.
 3. `/login` supports both Continue and Use another account when a session exists.
 4. Owner reaches the owner workspace and sees all employees.

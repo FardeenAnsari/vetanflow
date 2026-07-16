@@ -1,0 +1,16 @@
+.agents
+.codex
+.github
+.husky
+.venv
+.tmp
+backend/dist
+backend/src/**/*.test.ts
+docs
+frontend/dist
+graphify-out
+scripts
+supabase
+AGENTS.md
+README.md
+requirements-dev.txt

@@ -19,6 +19,12 @@ describe('app', () => {
     expect(response.body.ok).toBe(true)
   })
 
+  it('returns health status through the same-origin API prefix', async () => {
+    const response = await request(app).get('/api/health').expect(200)
+
+    expect(response.body.ok).toBe(true)
+  })
+
   it('returns sample employees', async () => {
     const response = await request(app).get('/api/employees').expect(200)
 
