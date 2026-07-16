@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const root = process.cwd()
-const appUrl = process.env.DEMO_APP_URL ?? 'http://127.0.0.1:5173/'
+const appUrl = process.env.DEMO_APP_URL ?? 'http://127.0.0.1:5173/app'
 
 const profiles = [
   { label: 'owner/admin', dir: '.tmp/chrome-owner' },

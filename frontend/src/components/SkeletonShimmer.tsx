@@ -11,7 +11,7 @@ function SkeletonBlock({ className = '' }: SkeletonBlockProps) {
   return (
     <span
       aria-hidden="true"
-      className={`relative block overflow-hidden rounded-lg bg-[color:rgba(211,212,192,0.48)] ${className}`}
+      className={`relative block overflow-hidden rounded-lg bg-slate-200/80 ${className}`}
     >
       {reduceMotion ? null : (
         <motion.span

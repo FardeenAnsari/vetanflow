@@ -4,24 +4,25 @@ Use this when recording a 6 to 8 minute product walkthrough. Keep the pace calm.
 
 ## Setup
 
-- Browser 1: owner/admin account signed in.
+- Browser 1: owner account signed in.
 - Browser 2: employee account signed in.
 - Terminal: keep `npm run verify` output ready, but do not show env files.
 - Terminal: run `npm run demo:check` before recording and fix any failed checks.
 - Screenshots folder: keep `docs/screenshots/` open if you want to show captured proof.
-- Demo data: use one month with locked attendance, one finalized run, generated payslips, and one employee with complete bank details.
-- Default prepared demo month: September 2026 (`DEMO_PERIOD_MONTH=2026-09-01`).
+- Demo data: use the previous month as the current close and the month before it as the variance baseline.
+- Run `npm run demo:bootstrap` before recording; the periods move with the calendar.
 - Signed-in screenshots should use `DEMO_SCREENSHOT_EXPECT_TEXT` so login-state mistakes fail before images are saved.
 
 ## 0:00 to 0:45, Opening
 
 Say:
 
-> This is VetanFlow, an India-first payroll operations system built with React, Express, and Supabase. It covers the month-end flow from employee setup to attendance locking, payroll approval, payslips, and exports.
+> This is VetanFlow, a configurable payroll operations system built with React, Express, and Supabase. It covers the month-end flow from employee setup to attendance locking, payroll approval, payslips, and exports.
 
 Show:
 
-- Sign-in screen.
+- Public landing and animated `/tour`.
+- Sign-in/account-switch screen at `/login`.
 - Mention invited work accounts.
 - Do not mention secrets or internal env values.
 
@@ -40,8 +41,10 @@ Show:
 - Employee directory.
 - Selected employee profile.
 - Digital ID card.
+- Owner download of a selected employee's two-sided ID PDF and the print/ribbon animation.
 - Salary history.
 - Bank readiness panel.
+- Organization country, currency, locale, and timezone selectors with live workflow previews.
 - Audit trail.
 
 Proof point:
@@ -74,8 +77,8 @@ Say:
 Show:
 
 - Payroll runs list.
-- Period filter set to `Sep 2026`.
-- September 2026 run detail.
+- Period filter set to the previous calendar month.
+- Latest finalized run detail, then the preceding run for variance context.
 - Employee line table.
 - Adjustment form.
 - Variance warning, if present.
@@ -111,7 +114,7 @@ Show:
 - Generate payslips action.
 - Employee payslip archive.
 - Payslip download.
-- Bank CSV, Statutory CSV, Department Cost CSV actions.
+- Bank CSV, Deductions CSV, Department Cost CSV actions.
 
 Proof point:
 
@@ -139,7 +142,7 @@ Proof point:
 For a 3 minute walkthrough:
 
 1. Show sign-in and role-controlled access.
-2. Show employee profile, ID card, bank readiness, and audit trail.
+2. Show employee profile, downloadable ID card, bank readiness, and audit trail.
 3. Show attendance lock feeding payroll.
 4. Show payroll run, maker-checker approval, and finalization.
 5. Show payslip download and CSV exports.

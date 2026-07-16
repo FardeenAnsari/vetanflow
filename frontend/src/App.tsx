@@ -9,10 +9,9 @@ import {
   Clock3,
   Download,
   FileText,
+  Globe2,
   History,
-  IndianRupee,
   KeyRound,
-  LayoutDashboard,
   ListChecks,
   LogIn,
   LogOut,
@@ -26,18 +25,43 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  UserRoundCog,
   UserPlus,
-  UsersRound,
+  WalletCards,
   X,
 } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { BrandLogo } from './components/BrandLogo'
 import { EmployeeIdCard } from './components/EmployeeIdCard'
 import { Folder } from './components/Folder'
+import { IdCardPrintAnimation } from './components/IdCardPrintAnimation'
+import { OperationsOverview } from './components/OperationsOverview'
+import { StatusBadge, type StatusTone } from './components/StatusBadge'
+import {
+  WorkspaceNavigation,
+} from './components/WorkspaceNavigation'
+import {
+  getAllowedWorkspaceSections,
+  getPrimaryWorkspaceRole,
+  isWorkspaceSection,
+  roleLabels,
+  type WorkspaceSection,
+} from './components/workspace-navigation-model'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
+import {
+  countryOptions,
+  currencyOptions,
+  getCountryOption,
+  localeOptions,
+  timezoneOptions,
+} from './lib/organization-options'
+import { PublicSite } from './public-site/PublicSite'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:4000')
+const defaultCurrencyCode = import.meta.env.VITE_DEFAULT_CURRENCY ?? 'USD'
+const defaultLocale = import.meta.env.VITE_DEFAULT_LOCALE ?? 'en-US'
 const PayrollWorkspaceSkeleton = lazy(() =>
   import('./components/SkeletonShimmer').then((module) => ({
     default: module.PayrollWorkspaceSkeleton,
@@ -46,12 +70,30 @@ const PayrollWorkspaceSkeleton = lazy(() =>
 
 type AppRole = 'owner' | 'admin' | 'hr' | 'finance' | 'manager' | 'employee'
 
+const appRoles: AppRole[] = ['owner', 'admin', 'hr', 'finance', 'manager', 'employee']
+
+function getDevelopmentFixtureRole() {
+  if (!import.meta.env.DEV || isSupabaseConfigured) {
+    return null
+  }
+
+  const role = new URLSearchParams(window.location.search).get('role') as AppRole | null
+
+  return role && appRoles.includes(role) ? role : null
+}
+
+const developmentFixtureRole = getDevelopmentFixtureRole()
+
+function withDevelopmentFixtureRole<T extends { currentUserRoles: AppRole[] }>(data: T): T {
+  return developmentFixtureRole ? { ...data, currentUserRoles: [developmentFixtureRole] } : data
+}
+
 type HrEmployee = {
   id: string
-  annualCtc: number
+  annualCompensation: number
   bankAccountHolderName: string | null
   bankAccountNumber: string | null
-  bankIfsc: string | null
+  bankRoutingCode: string | null
   bankName: string | null
   code: string
   department: string
@@ -85,7 +127,7 @@ type HrLocation = {
 
 type SalaryRevision = {
   id: string
-  annualCtc: number
+  annualCompensation: number
   createdAt: string
   effectiveFrom: string
   employeeId: string
@@ -101,16 +143,22 @@ type AuditEntry = {
   metadata: unknown
 }
 
+type OrganizationSettings = {
+  countryCode: string
+  currencyCode: string
+  id: string
+  locale: string
+  name: string
+  timezone: string
+}
+
 type HrMasterData = {
   auditEntries: AuditEntry[]
   currentUserRoles: AppRole[]
   departments: HrDepartment[]
   employees: HrEmployee[]
   locations: HrLocation[]
-  organization: {
-    id: string
-    name: string
-  } | null
+  organization: OrganizationSettings | null
   salaryRevisions: SalaryRevision[]
 }
 
@@ -177,7 +225,7 @@ type AttendanceStatus =
   | 'weekly_off'
 
 type AttendanceEmployee = {
-  annualCtc: number
+  annualCompensation: number
   code: string
   fullName: string
   id: string
@@ -214,18 +262,15 @@ type AttendanceMonthLock = {
 type PayrollPreview = {
   employeeId: string
   grossMonthly: number
-  basic: number
-  hra: number
-  specialAllowance: number
   unpaidLeaveDeduction: number
-  employeePf: number
-  employeeEsi: number
-  professionalTax: number
+  retirementContributionAmount: number
+  socialInsuranceAmount: number
+  localPayrollTaxAmount: number
   preTaxDeductionAmount: number
   postTaxDeductionAmount: number
   reimbursementAmount: number
   taxableEarningsAmount: number
-  tdsAmount: number
+  withholdingTaxAmount: number
   totalEarnings: number
   totalDeductions: number
   netPay: number
@@ -238,18 +283,18 @@ type PayrollPreview = {
   }
   deductions: {
     unpaidLeave: number
-    employeePf: number
-    employeeEsi: number
-    professionalTax: number
+    retirementContribution: number
+    socialInsurance: number
+    localPayrollTax: number
     preTaxAdjustments: number
     postTaxAdjustments: number
-    tds: number
+    withholdingTax: number
   }
-  statutory: {
-    employeePf: number
-    employeeEsi: number
-    professionalTax: number
-    tds: number
+  deductionSummary: {
+    retirementContribution: number
+    socialInsurance: number
+    localPayrollTax: number
+    withholdingTax: number
   }
 }
 
@@ -438,7 +483,7 @@ type PayslipDownloadResponse = {
   }
 }
 
-type PayrollExportType = 'bank' | 'department-cost' | 'statutory'
+type PayrollExportType = 'bank' | 'deductions' | 'department-cost'
 
 type PayslipPortalItem = {
   employeeCode: string
@@ -467,11 +512,23 @@ type PayslipPortalResponse = {
   }
 }
 
+type OrganizationMember = {
+  createdAt: string
+  email: string
+  fullName: string
+  roles: string[]
+  userId: string
+}
+
+type OrganizationMembersResponse = {
+  data: OrganizationMember[]
+}
+
 type EmployeeFormState = {
-  annualCtc: string
+  annualCompensation: string
   bankAccountHolderName: string
   bankAccountNumber: string
-  bankIfsc: string
+  bankRoutingCode: string
   bankName: string
   code: string
   departmentId: string
@@ -513,6 +570,14 @@ type HolidayFormState = {
   holidayDate: string
   name: string
 }
+
+type InvitationFormState = {
+  email: string
+  fullName: string
+  role: Exclude<AppRole, 'owner'>
+}
+
+type OrganizationFormState = Omit<OrganizationSettings, 'id'>
 
 type FieldErrors = Partial<Record<'departmentName' | 'employeeCode' | 'locationName', string>>
 
@@ -571,7 +636,7 @@ const payrollAdjustmentDefaults: Record<
 }
 
 const formControlClass =
-  'mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)] disabled:cursor-not-allowed disabled:bg-[color:rgba(211,212,192,0.22)] disabled:text-neutral-500'
+  'mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)] disabled:cursor-not-allowed disabled:bg-[color:rgba(231,235,240,0.22)] disabled:text-neutral-500'
 
 const fallbackMasterData: HrMasterData = {
   auditEntries: [],
@@ -599,17 +664,17 @@ const fallbackMasterData: HrMasterData = {
   employees: [
     {
       id: 'emp_001',
-      annualCtc: 1200000,
+      annualCompensation: 120000,
       bankAccountHolderName: null,
       bankAccountNumber: null,
-      bankIfsc: null,
+      bankRoutingCode: null,
       bankName: null,
-      code: 'IND-001',
+      code: 'VF-001',
       department: 'Engineering',
       departmentId: '10000000-0000-0000-0000-000000000001',
       fullName: 'Aarav Mehta',
       joiningDate: '2025-04-01',
-      location: 'Kolkata',
+      location: 'New York',
       photoUrl: null,
       role: 'Frontend Engineer',
       status: 'active',
@@ -618,17 +683,17 @@ const fallbackMasterData: HrMasterData = {
     },
     {
       id: 'emp_002',
-      annualCtc: 900000,
+      annualCompensation: 90000,
       bankAccountHolderName: null,
       bankAccountNumber: null,
-      bankIfsc: null,
+      bankRoutingCode: null,
       bankName: null,
-      code: 'IND-002',
+      code: 'VF-002',
       department: 'Finance',
       departmentId: '10000000-0000-0000-0000-000000000002',
       fullName: 'Naina Kapoor',
       joiningDate: '2024-10-15',
-      location: 'Mumbai',
+      location: 'Austin',
       photoUrl: null,
       role: 'Payroll Specialist',
       status: 'active',
@@ -637,17 +702,17 @@ const fallbackMasterData: HrMasterData = {
     },
     {
       id: 'emp_003',
-      annualCtc: 1500000,
+      annualCompensation: 150000,
       bankAccountHolderName: null,
       bankAccountNumber: null,
-      bankIfsc: null,
+      bankRoutingCode: null,
       bankName: null,
-      code: 'IND-003',
+      code: 'VF-003',
       department: 'Operations',
       departmentId: '10000000-0000-0000-0000-000000000003',
       fullName: 'Ritwik Sen',
       joiningDate: '2026-01-10',
-      location: 'Bengaluru',
+      location: 'Seattle',
       photoUrl: null,
       role: 'Operations Manager',
       status: 'draft',
@@ -658,40 +723,44 @@ const fallbackMasterData: HrMasterData = {
   locations: [
     {
       id: '20000000-0000-0000-0000-000000000001',
-      city: 'Kolkata',
-      countryCode: 'IN',
+      city: 'New York',
+      countryCode: 'US',
       isActive: true,
-      name: 'Kolkata HQ',
+      name: 'New York HQ',
       organizationId: '00000000-0000-0000-0000-000000000001',
-      state: 'West Bengal',
+      state: 'New York',
     },
     {
       id: '20000000-0000-0000-0000-000000000002',
-      city: 'Mumbai',
-      countryCode: 'IN',
+      city: 'Austin',
+      countryCode: 'US',
       isActive: true,
-      name: 'Mumbai Finance Office',
+      name: 'Austin Finance Office',
       organizationId: '00000000-0000-0000-0000-000000000001',
-      state: 'Maharashtra',
+      state: 'Texas',
     },
     {
       id: '20000000-0000-0000-0000-000000000003',
-      city: 'Bengaluru',
-      countryCode: 'IN',
+      city: 'Seattle',
+      countryCode: 'US',
       isActive: true,
-      name: 'Bengaluru Operations Hub',
+      name: 'Seattle Operations Hub',
       organizationId: '00000000-0000-0000-0000-000000000001',
-      state: 'Karnataka',
+      state: 'Washington',
     },
   ],
   organization: {
+    countryCode: 'US',
+    currencyCode: 'USD',
     id: '00000000-0000-0000-0000-000000000001',
-    name: 'VetanFlow Demo India',
+    locale: 'en-US',
+    name: 'VetanFlow Labs',
+    timezone: 'America/New_York',
   },
   salaryRevisions: [
     {
       id: 'salary_emp_001',
-      annualCtc: 1200000,
+      annualCompensation: 120000,
       createdAt: '2026-07-04T00:00:00.000Z',
       effectiveFrom: '2025-04-01',
       employeeId: 'emp_001',
@@ -699,7 +768,7 @@ const fallbackMasterData: HrMasterData = {
     },
     {
       id: 'salary_emp_002',
-      annualCtc: 900000,
+      annualCompensation: 90000,
       createdAt: '2026-07-04T00:00:00.000Z',
       effectiveFrom: '2024-10-15',
       employeeId: 'emp_002',
@@ -707,7 +776,7 @@ const fallbackMasterData: HrMasterData = {
     },
     {
       id: 'salary_emp_003',
-      annualCtc: 1500000,
+      annualCompensation: 150000,
       createdAt: '2026-07-04T00:00:00.000Z',
       effectiveFrom: '2026-01-10',
       employeeId: 'emp_003',
@@ -735,7 +804,7 @@ function createFallbackAttendanceDashboard(periodMonth?: string): AttendanceDash
   const endDate = new Date(Date.UTC(year, monthIndex, 0)).toISOString().slice(0, 10)
   const calendarDays = getCalendarDaysInPeriod(month)
   const employees = fallbackMasterData.employees.map((employee) => ({
-    annualCtc: employee.annualCtc,
+    annualCompensation: employee.annualCompensation,
     code: employee.code,
     fullName: employee.fullName,
     id: employee.id,
@@ -743,10 +812,10 @@ function createFallbackAttendanceDashboard(periodMonth?: string): AttendanceDash
   }))
   const holidays = [
     {
-      holidayDate: '2026-08-15',
-      id: 'holiday_independence_day',
-      name: 'Independence Day',
-      region: 'IN',
+      holidayDate: '2026-09-18',
+      id: 'holiday_company_day',
+      name: 'Company day',
+      region: 'GLOBAL',
     },
   ].filter((holiday) => holiday.holidayDate >= month && holiday.holidayDate <= endDate)
 
@@ -769,7 +838,7 @@ function createFallbackAttendanceDashboard(periodMonth?: string): AttendanceDash
       employeeCode: employee.code,
       employeeId: employee.id,
       employeeName: employee.fullName,
-      grossMonthly: employee.annualCtc / 12,
+      grossMonthly: employee.annualCompensation / 12,
       halfDays: 0,
       holidays: holidays.length,
       lossOfPayDays: 0,
@@ -777,44 +846,41 @@ function createFallbackAttendanceDashboard(periodMonth?: string): AttendanceDash
       paidLeaveDays: 0,
       payableDays: holidays.length,
       payrollPreview: {
-        basic: employee.annualCtc / 24,
         employeeId: employee.id,
-        employeeEsi: 0,
-        employeePf: 1800,
+        retirementContributionAmount: 0,
+        socialInsuranceAmount: 0,
+        localPayrollTaxAmount: 0,
         deductions: {
-          employeeEsi: 0,
-          employeePf: 1800,
+          retirementContribution: 0,
+          socialInsurance: 0,
+          localPayrollTax: 0,
           postTaxAdjustments: 0,
           preTaxAdjustments: 0,
-          professionalTax: employee.annualCtc / 12 > 10000 ? 200 : 0,
-          tds: 0,
+          withholdingTax: 0,
           unpaidLeave: 0,
         },
         earnings: {
           bonus: 0,
-          fixedGross: employee.annualCtc / 12,
+          fixedGross: employee.annualCompensation / 12,
           overtime: 0,
           reimbursements: 0,
           taxableAdjustments: 0,
         },
-        grossMonthly: employee.annualCtc / 12,
-        hra: employee.annualCtc / 60,
-        netPay: employee.annualCtc / 12,
+        grossMonthly: employee.annualCompensation / 12,
+        netPay: employee.annualCompensation / 12,
         postTaxDeductionAmount: 0,
         preTaxDeductionAmount: 0,
-        professionalTax: employee.annualCtc / 12 > 10000 ? 200 : 0,
         reimbursementAmount: 0,
-        specialAllowance: employee.annualCtc / 12 - employee.annualCtc / 24 - employee.annualCtc / 60,
-        statutory: {
-          employeeEsi: 0,
-          employeePf: 1800,
-          professionalTax: employee.annualCtc / 12 > 10000 ? 200 : 0,
-          tds: 0,
+        deductionSummary: {
+          retirementContribution: 0,
+          socialInsurance: 0,
+          localPayrollTax: 0,
+          withholdingTax: 0,
         },
         taxableEarningsAmount: 0,
-        tdsAmount: 0,
+        withholdingTaxAmount: 0,
         totalDeductions: 0,
-        totalEarnings: employee.annualCtc / 12,
+        totalEarnings: employee.annualCompensation / 12,
         unpaidLeaveDeduction: 0,
       },
       presentDays: 0,
@@ -824,24 +890,28 @@ function createFallbackAttendanceDashboard(periodMonth?: string): AttendanceDash
   }
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-IN', {
-    currency: 'INR',
+function formatCurrencyValue(
+  value: number,
+  currencyCode = defaultCurrencyCode,
+  locale = defaultLocale,
+) {
+  return new Intl.NumberFormat(locale, {
+    currency: currencyCode,
     maximumFractionDigits: 0,
     style: 'currency',
   }).format(value)
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en-IN', {
+function formatDateValue(value: string, locale = defaultLocale) {
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   }).format(new Date(value))
 }
 
-function formatMonth(value: string) {
-  return new Intl.DateTimeFormat('en-IN', {
+function formatMonthValue(value: string, locale = defaultLocale) {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     year: 'numeric',
   }).format(new Date(value))
@@ -866,7 +936,15 @@ function formatLeaveStatus(status: LeaveStatus) {
 }
 
 function formatLeaveType(leaveType: string) {
-  return formatLabel(leaveType)
+  const labels: Record<string, string> = {
+    casual: 'Personal',
+    earned: 'Vacation',
+    other: 'Other',
+    sick: 'Medical',
+    unpaid: 'Unpaid',
+  }
+
+  return labels[leaveType] ?? formatLabel(leaveType)
 }
 
 function formatAttendanceStatus(status: AttendanceStatus) {
@@ -875,6 +953,27 @@ function formatAttendanceStatus(status: AttendanceStatus) {
 
 function formatPayrollRunStatus(status: PayrollRunStatus) {
   return formatLabel(status)
+}
+
+function getEmployeeStatusTone(status: HrEmployee['status']): StatusTone {
+  if (status === 'active') return 'success'
+  if (status === 'inactive') return 'danger'
+  if (status === 'on_leave') return 'info'
+  return 'warning'
+}
+
+function getLeaveStatusTone(status: LeaveStatus): StatusTone {
+  if (status === 'approved') return 'success'
+  if (status === 'rejected') return 'danger'
+  if (status === 'pending') return 'warning'
+  return 'neutral'
+}
+
+function getPayrollStatusTone(status: PayrollRunStatus): StatusTone {
+  if (status === 'finalized' || status === 'approved') return 'success'
+  if (status === 'cancelled') return 'danger'
+  if (status === 'reviewing') return 'warning'
+  return 'info'
 }
 
 function getPayrollRunPeriodKey(run: PayrollRun) {
@@ -928,12 +1027,40 @@ function isLeaveApproverRole(role: AppRole) {
   return role === 'owner' || role === 'admin' || role === 'hr' || role === 'manager'
 }
 
-function getTodayInputValue() {
-  return new Date().toISOString().slice(0, 10)
+const invitationRoleLabels: Record<InvitationFormState['role'], string> = {
+  admin: 'Administrator',
+  employee: 'Employee',
+  finance: 'Finance',
+  hr: 'People operations',
+  manager: 'Manager',
 }
 
-function getCurrentPeriodMonth() {
-  return `${getTodayInputValue().slice(0, 7)}-01`
+function getAssignableInvitationRoles(roles: AppRole[]): InvitationFormState['role'][] {
+  if (roles.includes('owner')) {
+    return ['admin', 'hr', 'finance', 'manager', 'employee']
+  }
+
+  if (roles.includes('admin')) {
+    return ['hr', 'finance', 'manager', 'employee']
+  }
+
+  return ['manager', 'employee']
+}
+
+function getTodayInputValue(timeZone = 'UTC') {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone,
+    year: 'numeric',
+  }).formatToParts(new Date())
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+
+  return `${values.year}-${values.month}-${values.day}`
+}
+
+function getCurrentPeriodMonth(timeZone = 'UTC') {
+  return `${getTodayInputValue(timeZone).slice(0, 7)}-01`
 }
 
 function toMonthInputValue(periodMonth: string) {
@@ -960,10 +1087,10 @@ function getDefaultWorkLocationId(masterData: HrMasterData) {
 
 function createEmptyEmployeeForm(masterData: HrMasterData): EmployeeFormState {
   return {
-    annualCtc: '',
+    annualCompensation: '',
     bankAccountHolderName: '',
     bankAccountNumber: '',
-    bankIfsc: '',
+    bankRoutingCode: '',
     bankName: '',
     code: '',
     departmentId: getDefaultDepartmentId(masterData),
@@ -978,10 +1105,10 @@ function createEmptyEmployeeForm(masterData: HrMasterData): EmployeeFormState {
 
 function createEmployeeFormFromRecord(employee: HrEmployee): EmployeeFormState {
   return {
-    annualCtc: String(employee.annualCtc),
+    annualCompensation: String(employee.annualCompensation),
     bankAccountHolderName: employee.bankAccountHolderName ?? '',
     bankAccountNumber: employee.bankAccountNumber ?? '',
-    bankIfsc: employee.bankIfsc ?? '',
+    bankRoutingCode: employee.bankRoutingCode ?? '',
     bankName: employee.bankName ?? '',
     code: employee.code,
     departmentId: employee.departmentId ?? '',
@@ -1059,6 +1186,30 @@ function getEmployeeIdFromHash() {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+function getWorkspaceSectionFromHash(): WorkspaceSection | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const value = window.location.hash.slice(1)
+
+  return isWorkspaceSection(value) ? value : null
+}
+
+function getNoticeTone(message: string): StatusTone {
+  const normalized = message.toLowerCase()
+
+  if (/(unable|invalid|failed|error|forbidden|not found|already exists)/.test(normalized)) {
+    return 'danger'
+  }
+
+  if (/(required|missing|locked|pending|different approver|different finalizer)/.test(normalized)) {
+    return 'warning'
+  }
+
+  return 'success'
+}
+
 function getFieldErrorFromMessage(message: string): FieldErrors {
   const normalized = message.toLowerCase()
 
@@ -1077,13 +1228,17 @@ function getFieldErrorFromMessage(message: string): FieldErrors {
   return {}
 }
 
+function wait(durationMs: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, durationMs))
+}
+
 function AuthLoadingScreen() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-[var(--vf-surface)] px-4 text-[var(--vf-navy)]">
       <section className="w-full max-w-sm rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--vf-navy)] text-white">
-            <Banknote size={20} aria-hidden="true" />
+            <BrandLogo inverse showName={false} />
           </div>
           <div>
             <p className="text-sm font-semibold">VetanFlow</p>
@@ -1095,7 +1250,7 @@ function AuthLoadingScreen() {
   )
 }
 
-function SignInScreen() {
+function SignInScreen({ onSignedIn }: { onSignedIn: () => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -1119,7 +1274,10 @@ function SignInScreen() {
     if (signInError) {
       setError(signInError.message)
       setIsSubmitting(false)
+      return
     }
+
+    onSignedIn()
   }
 
   return (
@@ -1132,13 +1290,17 @@ function SignInScreen() {
           >
             <div className="mb-8 flex items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--vf-navy)] text-white">
-                <Banknote size={20} aria-hidden="true" />
+                <BrandLogo inverse showName={false} />
               </div>
               <div>
                 <p className="text-sm font-semibold">VetanFlow</p>
-                <p className="text-xs text-neutral-500">India payroll ops</p>
+                <p className="text-xs text-neutral-500">Payroll operations</p>
               </div>
             </div>
+
+            <a className="mb-6 inline-flex min-h-11 items-center text-sm font-semibold text-blue-700" href="/">
+              ← Back to VetanFlow overview
+            </a>
 
             <div className="space-y-2">
               <h1 className="text-2xl font-semibold tracking-normal">Sign in</h1>
@@ -1156,7 +1318,7 @@ function SignInScreen() {
                   />
                   <input
                     autoComplete="email"
-                    className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] pl-10 pr-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                    className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] pl-10 pr-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                     onChange={(event) => setEmail(event.target.value)}
                     required
                     type="email"
@@ -1175,7 +1337,7 @@ function SignInScreen() {
                   />
                   <input
                     autoComplete="current-password"
-                    className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] pl-10 pr-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                    className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] pl-10 pr-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                     onChange={(event) => setPassword(event.target.value)}
                     required
                     type="password"
@@ -1207,7 +1369,7 @@ function SignInScreen() {
             <p className="text-sm font-medium text-[var(--vf-cream)]">July 2026 payroll</p>
             <h2 className="mt-3 text-4xl font-semibold tracking-normal">Secure payroll operations</h2>
             <div className="mt-8 grid gap-3">
-              {['Role-controlled access', 'Audit-ready employee data', 'India-first payroll workflow'].map(
+              {['Role-controlled access', 'Audit-ready employee data', 'Controlled payroll workflow'].map(
                 (item) => (
                   <div key={item} className="flex items-center gap-3 rounded-lg border border-white/10 bg-[color:rgba(255,250,240,0.05)] p-4">
                     <ShieldCheck size={19} className="text-[var(--vf-cream)]" aria-hidden="true" />
@@ -1219,6 +1381,56 @@ function SignInScreen() {
           </div>
         </section>
       </div>
+    </main>
+  )
+}
+
+function AccountSwitchScreen({
+  onContinue,
+  onUseAnotherAccount,
+  session,
+}: {
+  onContinue: () => void
+  onUseAnotherAccount: () => Promise<void>
+  session: Session
+}) {
+  const [isSwitching, setIsSwitching] = useState(false)
+
+  return (
+    <main className="grid min-h-dvh place-items-center bg-[var(--vf-surface)] px-4 text-[var(--vf-navy)]">
+      <section className="w-full max-w-md rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-6 shadow-lg">
+        <BrandLogo />
+        <p className="mt-8 text-xs font-semibold uppercase text-[var(--vf-primary)]">Active session</p>
+        <h1 className="mt-2 text-2xl font-semibold">Choose how to continue</h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--vf-text-muted)]">
+          This browser is currently signed in as <strong className="font-semibold text-[var(--vf-navy)]">{session.user.email}</strong>.
+        </p>
+        <div className="mt-6 grid gap-3">
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--vf-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--vf-primary-hover)]"
+            onClick={onContinue}
+            type="button"
+          >
+            <LogIn size={17} aria-hidden="true" />
+            Continue to this workspace
+          </button>
+          <button
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[color:var(--vf-border-strong)] px-4 text-sm font-semibold transition hover:bg-[var(--vf-primary-soft)] disabled:opacity-60"
+            disabled={isSwitching}
+            onClick={() => {
+              setIsSwitching(true)
+              void onUseAnotherAccount().finally(() => setIsSwitching(false))
+            }}
+            type="button"
+          >
+            <UserRoundCog size={17} aria-hidden="true" />
+            {isSwitching ? 'Ending local session' : 'Use another account'}
+          </button>
+        </div>
+        <a className="mt-6 inline-flex min-h-11 items-center text-sm font-semibold text-[var(--vf-primary)]" href="/">
+          Back to VetanFlow overview
+        </a>
+      </section>
     </main>
   )
 }
@@ -1239,9 +1451,9 @@ function EmployeePhotoUploadControl({
   const isDark = tone === 'dark'
   const inputId = `employee-photo-${employee?.id ?? tone}`
   const buttonClass = isDark
-    ? 'border-[color:rgba(243,228,201,0.28)] bg-[color:rgba(243,228,201,0.12)] text-[var(--vf-cream)] hover:bg-[color:rgba(243,228,201,0.18)]'
+    ? 'border-[color:rgba(234,241,255,0.28)] bg-[color:rgba(234,241,255,0.12)] text-[var(--vf-cream)] hover:bg-[color:rgba(234,241,255,0.18)]'
     : 'border-[color:var(--vf-border)] bg-[var(--vf-paper)] text-[var(--vf-navy)] hover:bg-[var(--vf-cream)]'
-  const helperClass = isDark ? 'text-[color:rgba(243,228,201,0.68)]' : 'text-neutral-500'
+  const helperClass = isDark ? 'text-[color:rgba(234,241,255,0.68)]' : 'text-neutral-500'
   const disabled = !employee || isUploading
 
   return (
@@ -1282,6 +1494,7 @@ type EmployeeSelfServiceProps = {
   canSignOut: boolean
   dataSourceLabel: string
   employee: HrEmployee | null
+  isDownloadingIdCard: boolean
   isUploadingPhoto: boolean
   isSubmitting: boolean
   leaveForm: LeaveFormState
@@ -1290,6 +1503,7 @@ type EmployeeSelfServiceProps = {
   masterData: HrMasterData
   notice: string
   onCancelLeave: (request: LeaveRequest) => Promise<void>
+  onIdCardDownload: (employeeId: string) => Promise<void>
   onLeaveFormChange: (form: LeaveFormState | ((current: LeaveFormState) => LeaveFormState)) => void
   onLeaveSubmit: (event: FormEvent<HTMLFormElement>, employeeId: string | null) => Promise<void>
   onPayslipDownload: (payslipId: string) => Promise<void>
@@ -1305,6 +1519,7 @@ function EmployeeSelfService({
   canSignOut,
   dataSourceLabel,
   employee,
+  isDownloadingIdCard,
   isUploadingPhoto,
   isSubmitting,
   leaveForm,
@@ -1313,6 +1528,7 @@ function EmployeeSelfService({
   masterData,
   notice,
   onCancelLeave,
+  onIdCardDownload,
   onLeaveFormChange,
   onLeaveSubmit,
   onPayslipDownload,
@@ -1323,9 +1539,14 @@ function EmployeeSelfService({
   payslips,
   salaryHistory,
 }: EmployeeSelfServiceProps) {
+  const organizationCurrency = masterData.organization?.currencyCode ?? defaultCurrencyCode
+  const organizationLocale = masterData.organization?.locale ?? defaultLocale
+  const formatCurrency = (value: number) =>
+    formatCurrencyValue(value, organizationCurrency, organizationLocale)
+  const formatDate = (value: string) => formatDateValue(value, organizationLocale)
   const latestSalary = salaryHistory[0]
   const latestPayslip = payslips[0]
-  const monthlyCtc = employee ? employee.annualCtc / 12 : 0
+  const monthlyCompensation = employee ? employee.annualCompensation / 12 : 0
   const documentItems = [
     <span key="profile">Profile</span>,
     <span key="salary">Salary</span>,
@@ -1335,20 +1556,18 @@ function EmployeeSelfService({
   return (
     <main className="min-h-dvh bg-[var(--vf-surface)] text-[var(--vf-navy)]">
       <div className="grid min-h-dvh lg:grid-cols-[320px_1fr]">
-        <aside className="bg-[var(--vf-navy)] px-6 py-6 text-[var(--vf-cream)] lg:min-h-dvh">
+        <aside className="hidden bg-[var(--vf-navy)] px-6 py-6 text-[var(--vf-cream)] lg:block lg:min-h-dvh">
           <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-lg bg-[var(--vf-cream)] text-[var(--vf-navy)]">
-              <Banknote size={20} aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">VetanFlow</p>
-              <p className="text-xs text-[color:rgba(243,228,201,0.72)]">Employee self-service</p>
-            </div>
+            <BrandLogo inverse />
+            <span className="sr-only">Employee self-service</span>
           </div>
 
           <EmployeeIdCard
             className="mt-10"
             employee={employee}
+            isDownloading={isDownloadingIdCard}
+            locale={organizationLocale}
+            onDownload={onIdCardDownload}
             organizationName={masterData.organization?.name}
             tone="dark"
           />
@@ -1363,22 +1582,18 @@ function EmployeeSelfService({
 
           <nav aria-label="Employee navigation" className="mt-6 space-y-2">
             {[
-              { icon: FileText, label: 'My profile' },
-              { icon: IndianRupee, label: 'Pay history' },
-              { icon: CalendarCheck, label: 'Attendance' },
-              { icon: FileText, label: 'Documents' },
-            ].map((item, index) => {
+              { href: '#employee-overview', icon: FileText, label: 'Overview' },
+              { href: '#employee-profile', icon: ShieldCheck, label: 'Profile & documents' },
+              { href: '#employee-pay', icon: WalletCards, label: 'Pay history' },
+              { href: '#employee-leave', icon: CalendarCheck, label: 'Leave requests' },
+            ].map((item) => {
               const Icon = item.icon
 
               return (
                 <a
                   key={item.label}
-                  href="#employee-self-service"
-                  className={`flex min-h-11 items-center gap-3 rounded-lg border px-3 text-sm font-medium transition ${
-                    index === 0
-                      ? 'border-[color:rgba(243,228,201,0.35)] bg-[color:rgba(243,228,201,0.12)]'
-                      : 'border-transparent text-[color:rgba(243,228,201,0.78)] hover:bg-[color:rgba(255,250,240,0.1)]'
-                  }`}
+                  href={item.href}
+                  className="flex min-h-11 items-center gap-3 rounded-lg border border-transparent px-3 text-sm font-medium text-white/75 transition hover:border-white/15 hover:bg-white/10 hover:text-white"
                 >
                   <Icon size={17} aria-hidden="true" />
                   {item.label}
@@ -1389,17 +1604,32 @@ function EmployeeSelfService({
         </aside>
 
         <section id="employee-self-service" className="min-w-0">
-          <header className="sticky top-0 z-10 border-b border-[color:var(--vf-border)] bg-[color:rgba(251,247,239,0.94)] px-4 py-4 backdrop-blur md:px-8">
+          <header className="sticky top-0 z-10 border-b border-[color:var(--vf-border)] bg-white/95 px-4 py-4 backdrop-blur-md md:px-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
+                <div className="mb-2 flex items-center gap-2 lg:hidden">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--vf-navy)] text-white">
+                    <Banknote size={16} aria-hidden="true" />
+                  </div>
+                  <p className="text-sm font-semibold">VetanFlow</p>
+                </div>
                 <p className="text-sm font-medium text-[var(--vf-brown)]">{dataSourceLabel}</p>
                 <h2 className="text-2xl font-semibold tracking-normal md:text-3xl">My payroll workspace</h2>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
+                {canSignOut ? (
+                  <a
+                    className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-4 text-sm font-semibold transition hover:bg-[var(--vf-cream)]"
+                    href="/login"
+                  >
+                    <UserRoundCog size={17} aria-hidden="true" />
+                    Switch account
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   onClick={onRefresh}
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-4 text-sm font-semibold transition hover:bg-[var(--vf-cream)]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-4 text-sm font-semibold transition hover:bg-[var(--vf-cream)]"
                 >
                   <RefreshCw size={17} aria-hidden="true" />
                   Refresh
@@ -1408,7 +1638,7 @@ function EmployeeSelfService({
                   <button
                     type="button"
                     onClick={onSignOut}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--vf-navy)] px-4 text-sm font-semibold text-[var(--vf-cream)] transition hover:bg-[#12395d]"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[var(--vf-navy)] px-4 text-sm font-semibold text-[var(--vf-cream)] transition hover:bg-[#12395d]"
                   >
                     <LogOut size={17} aria-hidden="true" />
                     Sign out
@@ -1416,24 +1646,46 @@ function EmployeeSelfService({
                 ) : null}
               </div>
             </div>
+            <label className="mt-4 block lg:hidden">
+              <span className="sr-only">Employee workspace section</span>
+              <select
+                aria-label="Employee workspace section"
+                className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border-strong)] bg-white px-3 text-sm font-semibold text-[var(--vf-navy)] outline-none focus:border-[var(--vf-primary)] focus:ring-3 focus:ring-[var(--vf-focus)]"
+                defaultValue="employee-overview"
+                onChange={(event) => {
+                  window.location.hash = event.target.value
+                }}
+              >
+                <option value="employee-overview">Overview</option>
+                <option value="employee-profile">Profile & documents</option>
+                <option value="employee-pay">Pay history</option>
+                <option value="employee-leave">Leave requests</option>
+              </select>
+            </label>
           </header>
 
           <div className="space-y-6 px-4 py-6 md:px-8">
             {notice ? (
               <p
-                className="rounded-lg border border-[color:rgba(139,94,60,0.24)] bg-[var(--vf-cream)] px-4 py-3 text-sm font-medium text-[var(--vf-brown)]"
+                className={`rounded-lg border px-4 py-3 text-sm font-medium ${
+                  getNoticeTone(notice) === 'danger'
+                    ? 'border-red-200 bg-red-50 text-red-900'
+                    : getNoticeTone(notice) === 'warning'
+                      ? 'border-amber-200 bg-amber-50 text-amber-950'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                }`}
                 role="status"
               >
                 {notice}
               </p>
             ) : null}
 
-            <section className="grid gap-4 md:grid-cols-3">
+            <section id="employee-overview" className="grid scroll-mt-28 gap-4 md:grid-cols-3">
               <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
-                <p className="text-sm text-[color:rgba(10,41,71,0.66)]">Monthly CTC</p>
-                <p className="tabular mt-2 text-2xl font-semibold">{formatCurrency(Math.round(monthlyCtc))}</p>
+                <p className="text-sm text-[color:rgba(10,41,71,0.66)]">Monthly compensation</p>
+                <p className="tabular mt-2 text-2xl font-semibold">{formatCurrency(Math.round(monthlyCompensation))}</p>
                 <p className="mt-4 text-sm font-medium text-[var(--vf-brown)]">
-                  {latestSalary ? `Revised ${formatDate(latestSalary.effectiveFrom)}` : `Annual ${formatCurrency(employee?.annualCtc ?? 0)}`}
+                  {latestSalary ? `Revised ${formatDate(latestSalary.effectiveFrom)}` : `Annual ${formatCurrency(employee?.annualCompensation ?? 0)}`}
                 </p>
               </article>
               <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
@@ -1454,7 +1706,17 @@ function EmployeeSelfService({
               </article>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1fr_360px]">
+            <div className="lg:hidden">
+              <EmployeeIdCard
+                employee={employee}
+                isDownloading={isDownloadingIdCard}
+                locale={organizationLocale}
+                onDownload={onIdCardDownload}
+                organizationName={masterData.organization?.name}
+              />
+            </div>
+
+            <section id="employee-profile" className="grid scroll-mt-28 gap-6 xl:grid-cols-[1fr_360px]">
               <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -1478,9 +1740,9 @@ function EmployeeSelfService({
                       ['Location', employee.location],
                       ['Joining date', formatDate(employee.joiningDate)],
                       ['Bank account', maskBankAccount(employee.bankAccountNumber)],
-                      ['IFSC', employee.bankIfsc ?? 'Not set'],
+                      ['Routing code', employee.bankRoutingCode ?? 'Not set'],
                     ].map(([label, value]) => (
-                      <div key={label} className="rounded-lg bg-[color:rgba(211,212,192,0.42)] p-4">
+                      <div key={label} className="rounded-lg bg-[color:rgba(231,235,240,0.42)] p-4">
                         <dt className="text-sm text-[color:rgba(10,41,71,0.6)]">{label}</dt>
                         <dd className="mt-1 break-words text-sm font-semibold">{value}</dd>
                       </div>
@@ -1495,14 +1757,14 @@ function EmployeeSelfService({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-lg font-semibold">Document folder</h2>
-                    <p className="mt-1 text-sm text-[color:rgba(243,228,201,0.72)]">Profile, pay, and tax documents</p>
+                    <p className="mt-1 text-sm text-[color:rgba(234,241,255,0.72)]">Profile, compensation, and payroll documents</p>
                   </div>
-                  <Folder color="#8B5E3C" items={documentItems} size={0.72} />
+                  <Folder color="#1D5FD1" items={documentItems} size={0.72} />
                 </div>
                 <div className="mt-6 grid gap-2">
                   {[
                     'Profile snapshot',
-                    'Salary revision letter',
+                    'Compensation revision letter',
                     `${payslips.length} payslip${payslips.length === 1 ? '' : 's'}`,
                   ].map((item) => (
                     <div
@@ -1510,14 +1772,14 @@ function EmployeeSelfService({
                       className="flex min-h-11 items-center justify-between rounded-lg border border-white/10 bg-[color:rgba(255,250,240,0.05)] px-3"
                     >
                       <p className="text-sm font-medium">{item}</p>
-                      <FileText size={16} className="text-[color:rgba(243,228,201,0.62)]" aria-hidden="true" />
+                      <FileText size={16} className="text-[color:rgba(234,241,255,0.62)]" aria-hidden="true" />
                     </div>
                   ))}
                 </div>
               </article>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-2">
+            <section id="employee-pay" className="grid scroll-mt-28 gap-6 xl:grid-cols-2">
               <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Salary history</h2>
@@ -1528,7 +1790,7 @@ function EmployeeSelfService({
                     salaryHistory.map((revision) => (
                       <div key={revision.id} className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-4">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="tabular text-sm font-semibold">{formatCurrency(revision.annualCtc)}</p>
+                          <p className="tabular text-sm font-semibold">{formatCurrency(revision.annualCompensation)}</p>
                           <p className="text-xs text-[color:rgba(10,41,71,0.62)]">{formatDate(revision.effectiveFrom)}</p>
                         </div>
                         <p className="mt-2 text-sm text-[color:rgba(10,41,71,0.68)]">{revision.reason}</p>
@@ -1566,9 +1828,9 @@ function EmployeeSelfService({
                               Published {payslip.publishedAt ? formatDate(payslip.publishedAt) : 'pending'}
                             </p>
                           </div>
-                          <span className="w-fit rounded-full bg-[var(--vf-cream)] px-3 py-1 text-xs font-semibold text-[var(--vf-brown)]">
+                          <StatusBadge tone={getPayrollStatusTone(payslip.runStatus)}>
                             {formatPayrollRunStatus(payslip.runStatus)}
-                          </span>
+                          </StatusBadge>
                         </div>
                         <dl className="mt-4 grid gap-3 sm:grid-cols-3">
                           {[
@@ -1576,7 +1838,7 @@ function EmployeeSelfService({
                             ['Deductions', formatCurrency(Math.round(payslip.totalDeductions))],
                             ['Net pay', formatCurrency(Math.round(payslip.netPay))],
                           ].map(([label, value]) => (
-                            <div key={label} className="rounded-lg bg-[color:rgba(211,212,192,0.42)] p-3">
+                            <div key={label} className="rounded-lg bg-[color:rgba(231,235,240,0.42)] p-3">
                               <dt className="text-xs text-[color:rgba(10,41,71,0.58)]">{label}</dt>
                               <dd className="tabular mt-1 text-sm font-semibold">{value}</dd>
                             </div>
@@ -1601,7 +1863,7 @@ function EmployeeSelfService({
                 </div>
               </article>
 
-              <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
+              <article id="employee-leave" className="scroll-mt-28 rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Leave requests</h2>
                   <CalendarCheck size={19} className="text-[var(--vf-brown)]" aria-hidden="true" />
@@ -1660,7 +1922,7 @@ function EmployeeSelfService({
                       onChange={(event) =>
                         onLeaveFormChange((current) => ({ ...current, reason: event.target.value }))
                       }
-                      placeholder="Family function"
+                      placeholder="Add a short note"
                       required
                       value={leaveForm.reason}
                     />
@@ -1683,19 +1945,9 @@ function EmployeeSelfService({
                       <div key={request.id} className="rounded-lg border border-[color:var(--vf-border)] p-4">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                           <p className="text-sm font-semibold">{formatLeaveType(request.leaveType)}</p>
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              request.status === 'approved'
-                                ? 'bg-emerald-50 text-emerald-800'
-                                : request.status === 'rejected'
-                                  ? 'bg-red-50 text-red-700'
-                                  : request.status === 'cancelled'
-                                    ? 'bg-neutral-200 text-neutral-600'
-                                    : 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                            }`}
-                          >
+                          <StatusBadge tone={getLeaveStatusTone(request.status)}>
                             {formatLeaveStatus(request.status)}
-                          </span>
+                          </StatusBadge>
                         </div>
                         <p className="mt-2 text-sm text-[color:rgba(10,41,71,0.68)]">
                           {formatDate(request.startDate)} to {formatDate(request.endDate)} · {request.totalDays} days
@@ -1727,8 +1979,9 @@ function EmployeeSelfService({
   )
 }
 
-function App() {
+function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boolean }) {
   const [session, setSession] = useState<Session | null>(null)
+  const [showAccountChoice, setShowAccountChoice] = useState(forceAccountChoice)
   const [authState, setAuthState] = useState<'checking' | 'ready'>(
     isSupabaseConfigured ? 'checking' : 'ready',
   )
@@ -1740,6 +1993,7 @@ function App() {
   )
   const [payrollData, setPayrollData] = useState<PayrollDashboard>(fallbackPayrollDashboard)
   const [payslipData, setPayslipData] = useState<PayslipPortal>({ payslips: [] })
+  const [organizationMembers, setOrganizationMembers] = useState<OrganizationMember[]>([])
   const [selectedPayrollRun, setSelectedPayrollRun] = useState<PayrollRunDetail | null>(null)
   const [payrollRunPeriodFilter, setPayrollRunPeriodFilter] = useState('all')
   const [dataState, setDataState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -1747,11 +2001,17 @@ function App() {
   const [attendanceState, setAttendanceState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [payrollState, setPayrollState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [payslipState, setPayslipState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [accessState, setAccessState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
   const [dataSource, setDataSource] = useState<'demo' | 'fixture' | 'supabase'>('demo')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(fallbackMasterData.employees[0]?.id ?? '')
   const [query, setQuery] = useState('')
   const [notice, setNotice] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [idCardDownloadEmployeeId, setIdCardDownloadEmployeeId] = useState<string | null>(null)
+  const [idCardPrintJob, setIdCardPrintJob] = useState<{
+    employee: HrEmployee
+    stage: 'attaching' | 'printing' | 'ready'
+  } | null>(null)
   const [photoUploadEmployeeId, setPhotoUploadEmployeeId] = useState<string | null>(null)
   const [departmentForm, setDepartmentForm] = useState({ isActive: true, name: '' })
   const [editingDepartmentId, setEditingDepartmentId] = useState<string | null>(null)
@@ -1761,6 +2021,9 @@ function App() {
   )
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [routeEmployeeId, setRouteEmployeeId] = useState<string | null>(() => getEmployeeIdFromHash())
+  const [activeSection, setActiveSection] = useState<WorkspaceSection>(
+    () => getWorkspaceSectionFromHash() ?? 'overview',
+  )
   const [auditEntityFilter, setAuditEntityFilter] = useState<AuditEntityFilter>('all')
   const [auditEmployeeFilter, setAuditEmployeeFilter] = useState('all')
   const [editingLocationId, setEditingLocationId] = useState<string | null>(null)
@@ -1775,14 +2038,50 @@ function App() {
     createEmptyAttendanceForm(fallbackMasterData.employees[0]?.id ?? ''),
   )
   const [holidayForm, setHolidayForm] = useState<HolidayFormState>(() => createEmptyHolidayForm())
+  const [invitationForm, setInvitationForm] = useState<InvitationFormState>({
+    email: '',
+    fullName: '',
+    role: 'employee',
+  })
+  const [organizationForm, setOrganizationForm] = useState<OrganizationFormState>({
+    countryCode: fallbackMasterData.organization?.countryCode ?? 'US',
+    currencyCode: fallbackMasterData.organization?.currencyCode ?? 'USD',
+    locale: fallbackMasterData.organization?.locale ?? 'en-US',
+    name: fallbackMasterData.organization?.name ?? 'VetanFlow Labs',
+    timezone: fallbackMasterData.organization?.timezone ?? 'UTC',
+  })
   const [payrollAdjustmentForm, setPayrollAdjustmentForm] = useState<PayrollAdjustmentFormState>(() =>
     createEmptyPayrollAdjustmentForm(),
   )
   const [salaryForm, setSalaryForm] = useState({
-    annualCtc: '',
+    annualCompensation: '',
     effectiveFrom: getTodayInputValue(),
     reason: 'Compensation revision',
   })
+  const organizationCurrency = masterData.organization?.currencyCode ?? defaultCurrencyCode
+  const organizationLocale = masterData.organization?.locale ?? defaultLocale
+  const organizationFormCountry = getCountryOption(organizationForm.countryCode)
+  const organizationPreferencePreview = {
+    currency: formatCurrencyValue(125_000, organizationForm.currencyCode, organizationForm.locale),
+    date: new Intl.DateTimeFormat(organizationForm.locale, {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date()),
+    time: new Intl.DateTimeFormat(organizationForm.locale, {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: organizationForm.timezone,
+      timeZoneName: 'short',
+    }).format(new Date()),
+  }
+  const formatCurrency = (value: number) =>
+    formatCurrencyValue(value, organizationCurrency, organizationLocale)
+  const formatDate = (value: string) => formatDateValue(value, organizationLocale)
+  const formatMonth = useCallback(
+    (value: string) => formatMonthValue(value, organizationLocale),
+    [organizationLocale],
+  )
 
   useEffect(() => {
     if (!supabase) {
@@ -1812,8 +2111,39 @@ function App() {
   }, [])
 
   useEffect(() => {
+    if (!masterData.organization) {
+      return
+    }
+
+    setOrganizationForm({
+      countryCode: masterData.organization.countryCode,
+      currencyCode: masterData.organization.currencyCode,
+      locale: masterData.organization.locale,
+      name: masterData.organization.name,
+      timezone: masterData.organization.timezone,
+    })
+  }, [masterData.organization])
+
+  useEffect(() => {
+    if (!masterData.organization?.timezone) {
+      return
+    }
+
+    setAttendancePeriodMonth(getCurrentPeriodMonth(masterData.organization.timezone))
+  }, [masterData.organization?.timezone])
+
+  useEffect(() => {
     function handleHashChange() {
-      setRouteEmployeeId(getEmployeeIdFromHash())
+      const employeeId = getEmployeeIdFromHash()
+      const workspaceSection = getWorkspaceSectionFromHash()
+
+      setRouteEmployeeId(employeeId)
+
+      if (employeeId) {
+        setActiveSection('employees')
+      } else if (workspaceSection) {
+        setActiveSection(workspaceSection)
+      }
     }
 
     window.addEventListener('hashchange', handleHashChange)
@@ -1858,11 +2188,11 @@ function App() {
 
       const payload = (await response.json()) as MasterDataResponse
 
-      setMasterData(payload.data)
+      setMasterData(withDevelopmentFixtureRole(payload.data))
       setDataSource(payload.meta?.source ?? 'supabase')
       setDataState('ready')
     } catch {
-      setMasterData(fallbackMasterData)
+      setMasterData(withDevelopmentFixtureRole(fallbackMasterData))
       setDataSource('demo')
       setDataState('error')
     }
@@ -1890,10 +2220,10 @@ function App() {
 
       const payload = (await response.json()) as LeaveDashboardResponse
 
-      setLeaveData(payload.data)
+      setLeaveData(withDevelopmentFixtureRole(payload.data))
       setLeaveState('ready')
     } catch {
-      setLeaveData(fallbackLeaveDashboard)
+      setLeaveData(withDevelopmentFixtureRole(fallbackLeaveDashboard))
       setLeaveState('error')
     }
   }, [session])
@@ -1921,10 +2251,10 @@ function App() {
 
       const payload = (await response.json()) as AttendanceDashboardResponse
 
-      setAttendanceData(payload.data)
+      setAttendanceData(withDevelopmentFixtureRole(payload.data))
       setAttendanceState('ready')
     } catch {
-      setAttendanceData(createFallbackAttendanceDashboard(attendancePeriodMonth))
+      setAttendanceData(withDevelopmentFixtureRole(createFallbackAttendanceDashboard(attendancePeriodMonth)))
       setAttendanceState('error')
     }
   }, [attendancePeriodMonth, session])
@@ -1951,10 +2281,10 @@ function App() {
 
       const payload = (await response.json()) as PayrollDashboardResponse
 
-      setPayrollData(payload.data)
+      setPayrollData(withDevelopmentFixtureRole(payload.data))
       setPayrollState('ready')
     } catch {
-      setPayrollData(fallbackPayrollDashboard)
+      setPayrollData(withDevelopmentFixtureRole(fallbackPayrollDashboard))
       setPayrollState('error')
     }
   }, [session])
@@ -1989,6 +2319,36 @@ function App() {
     }
   }, [session])
 
+  const shouldLoadAccess = masterData.currentUserRoles.some((role) =>
+    ['owner', 'admin', 'hr'].includes(role),
+  )
+  const loadOrganizationMembers = useCallback(async () => {
+    if (!isSupabaseConfigured || !session?.access_token) {
+      setAccessState('idle')
+      return
+    }
+
+    setAccessState('loading')
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/invitations`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Access API returned ${response.status}`)
+      }
+
+      const payload = (await response.json()) as OrganizationMembersResponse
+
+      setOrganizationMembers(payload.data)
+      setAccessState('ready')
+    } catch {
+      setOrganizationMembers([])
+      setAccessState('error')
+    }
+  }, [session])
+
   useEffect(() => {
     void loadMasterData()
   }, [loadMasterData])
@@ -2010,8 +2370,15 @@ function App() {
   }, [loadPayslipData])
 
   useEffect(() => {
+    if (shouldLoadAccess) {
+      void loadOrganizationMembers()
+    }
+  }, [loadOrganizationMembers, shouldLoadAccess])
+
+  useEffect(() => {
     if (routeEmployeeId && masterData.employees.some((employee) => employee.id === routeEmployeeId)) {
       setSelectedEmployeeId(routeEmployeeId)
+      setActiveSection('employees')
     }
   }, [masterData.employees, routeEmployeeId])
 
@@ -2083,7 +2450,14 @@ function App() {
   }, [editingLocationId, masterData.locations])
 
   async function handleSignOut() {
-    await supabase?.auth.signOut()
+    await supabase?.auth.signOut({ scope: 'local' })
+    window.location.replace('/login')
+  }
+
+  async function handleUseAnotherAccount() {
+    await supabase?.auth.signOut({ scope: 'local' })
+    setSession(null)
+    setShowAccountChoice(false)
   }
 
   async function sendJson<T>(path: string, method: 'DELETE' | 'PATCH' | 'POST', body?: unknown) {
@@ -2177,7 +2551,72 @@ function App() {
 
   function handleOpenEmployeeProfile(employeeId: string) {
     setSelectedEmployeeId(employeeId)
+    setActiveSection('employees')
     window.location.hash = getEmployeeProfileHash(employeeId)
+  }
+
+  function handleWorkspaceNavigate(section: WorkspaceSection) {
+    setActiveSection(section)
+    window.location.hash = section
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ behavior: reduceMotion ? 'auto' : 'smooth', top: 0 })
+  }
+
+  async function handleInviteUser(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!masterData.organization) {
+      setNotice('Organization setup is required before inviting users')
+      return
+    }
+
+    setIsSubmitting(true)
+    setNotice('')
+
+    try {
+      await postJson('/api/invitations', {
+        email: invitationForm.email.trim().toLowerCase(),
+        fullName: invitationForm.fullName.trim(),
+        organizationId: masterData.organization.id,
+        role: invitationForm.role,
+      })
+      setInvitationForm({ email: '', fullName: '', role: 'employee' })
+      setNotice(`Invitation sent to ${invitationForm.email.trim().toLowerCase()}`)
+      await loadOrganizationMembers()
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Unable to invite user')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleSaveOrganization(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!masterData.organization) {
+      return
+    }
+
+    setIsSubmitting(true)
+    setNotice('')
+
+    try {
+      await patchJson('/api/hr/organization', {
+        ...organizationForm,
+        countryCode: organizationForm.countryCode.trim().toUpperCase(),
+        currencyCode: organizationForm.currencyCode.trim().toUpperCase(),
+        locale: organizationForm.locale.trim(),
+        name: organizationForm.name.trim(),
+        organizationId: masterData.organization.id,
+        timezone: organizationForm.timezone.trim(),
+      })
+      setNotice('Organization settings updated')
+      await loadMasterData()
+    } catch (error) {
+      showRequestError(error, 'Unable to update organization settings')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   function handleStartEditDepartment(department: HrDepartment) {
@@ -2289,7 +2728,7 @@ function App() {
     try {
       const payload = {
         city: locationForm.city.trim(),
-        countryCode: 'IN',
+        countryCode: masterData.organization.countryCode,
         isActive: locationForm.isActive,
         name: locationForm.name.trim(),
         organizationId: masterData.organization.id,
@@ -2374,7 +2813,7 @@ function App() {
     const employeePayload = {
       bankAccountHolderName: employeeForm.bankAccountHolderName.trim(),
       bankAccountNumber: employeeForm.bankAccountNumber.trim(),
-      bankIfsc: employeeForm.bankIfsc.trim().toUpperCase(),
+      bankRoutingCode: employeeForm.bankRoutingCode.trim().toUpperCase(),
       bankName: employeeForm.bankName.trim(),
       code: employeeForm.code.trim(),
       departmentId: employeeForm.departmentId,
@@ -2392,7 +2831,7 @@ function App() {
         ? await patchJson<EmployeeWriteResponse>(`/api/hr/employees/${editingEmployeeId}`, employeePayload)
         : await postJson<EmployeeWriteResponse>('/api/hr/employees', {
             ...employeePayload,
-            annualCtc: Number(employeeForm.annualCtc),
+            annualCompensation: Number(employeeForm.annualCompensation),
           })
 
       setEditingEmployeeId(null)
@@ -2560,7 +2999,7 @@ function App() {
         holidayDate: holidayForm.holidayDate,
         name: holidayForm.name.trim(),
         organizationId: attendanceData.organization.id,
-        region: 'IN',
+        region: 'GLOBAL',
       })
       setHolidayForm(createEmptyHolidayForm())
       setNotice('Holiday saved')
@@ -2783,6 +3222,55 @@ function App() {
     }
   }
 
+  async function handleDownloadEmployeeIdCard(employeeId: string) {
+    const employee = masterData.employees.find((item) => item.id === employeeId)
+
+    setIdCardDownloadEmployeeId(employeeId)
+    setNotice('')
+
+    if (employee) {
+      setIdCardPrintJob({ employee, stage: 'printing' })
+    }
+
+    try {
+      const headers: Record<string, string> = {}
+
+      if (session?.access_token) {
+        headers.Authorization = `Bearer ${session.access_token}`
+      }
+
+      const response = await fetch(`${apiBaseUrl}/api/hr/employees/${employeeId}/id-card`, { headers })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(payload?.error ?? `ID card download failed with ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      setIdCardPrintJob(employee ? { employee, stage: 'attaching' } : null)
+      await wait(650)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = getDownloadFileName(
+        response.headers.get('content-disposition'),
+        'employee-id-card.pdf',
+      )
+      document.body.append(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      setIdCardPrintJob(employee ? { employee, stage: 'ready' } : null)
+      setNotice('Employee ID card PDF downloaded')
+      await wait(700)
+    } catch (error) {
+      showRequestError(error, 'Unable to download employee ID card')
+    } finally {
+      setIdCardDownloadEmployeeId(null)
+      setIdCardPrintJob(null)
+    }
+  }
+
   async function handleAddPayrollAdjustment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -2859,14 +3347,14 @@ function App() {
 
     try {
       await postJson('/api/hr/salary-revisions', {
-        annualCtc: Number(salaryForm.annualCtc),
+        annualCompensation: Number(salaryForm.annualCompensation),
         effectiveFrom: salaryForm.effectiveFrom,
         employeeId: selectedEmployeeId,
         organizationId: masterData.organization.id,
         reason: salaryForm.reason.trim(),
       })
       setSalaryForm({
-        annualCtc: '',
+        annualCompensation: '',
         effectiveFrom: getTodayInputValue(),
         reason: 'Compensation revision',
       })
@@ -2914,12 +3402,26 @@ function App() {
   }, [masterData.employees, query])
 
   const activeEmployees = masterData.employees.filter((employee) => employee.status === 'active')
-  const monthlyPayroll = activeEmployees.reduce((total, employee) => total + employee.annualCtc / 12, 0)
+  const payrollEligibleEmployees = masterData.employees.filter((employee) =>
+    ['active', 'on_leave', 'exit_pending'].includes(employee.status),
+  )
+  const monthlyPayroll = payrollEligibleEmployees.reduce(
+    (total, employee) => total + employee.annualCompensation / 12,
+    0,
+  )
   const canManageMasterData = masterData.currentUserRoles.some(isHrRole)
+  const canManageAccess = masterData.currentUserRoles.some((role) =>
+    ['owner', 'admin', 'hr'].includes(role),
+  )
+  const canManageOrganizationPreferences = masterData.currentUserRoles.some(
+    (role) => role === 'owner' || role === 'admin',
+  )
+  const assignableInvitationRoles = getAssignableInvitationRoles(masterData.currentUserRoles)
   const canRecordSalary = masterData.currentUserRoles.some(isPayrollRole)
   const canReviewLeave = leaveData.currentUserRoles.some(isLeaveApproverRole)
   const pendingLeaveRequests = leaveData.requests.filter((request) => request.status === 'pending')
   const canManageAttendance = attendanceData.currentUserRoles.some(isHrRole)
+  const canViewAttendancePay = attendanceData.currentUserRoles.some(isPayrollRole)
   const canUnlockAttendance = attendanceData.currentUserRoles.some((role) => role === 'owner' || role === 'admin')
   const attendanceMonthLock =
     attendanceData.locks.find((lock) => lock.periodMonth === attendanceData.period.month) ?? null
@@ -2947,7 +3449,7 @@ function App() {
     return [...byPeriod.entries()]
       .map(([value, label]) => ({ label, value }))
       .sort((a, b) => b.value.localeCompare(a.value))
-  }, [payrollData.runs])
+  }, [formatMonth, payrollData.runs])
   const filteredPayrollRuns = useMemo(() => {
     if (payrollRunPeriodFilter === 'all') {
       return payrollData.runs
@@ -3050,40 +3552,80 @@ function App() {
         : dataSource === 'supabase'
           ? 'Live from Supabase'
           : 'Backend fixture data'
-
-  const metrics = [
-    {
-      icon: UsersRound,
-      label: 'Headcount',
-      value: String(masterData.employees.length),
-      detail: `${activeEmployees.length} active`,
+  const primaryRole = getPrimaryWorkspaceRole(masterData.currentUserRoles)
+  const workspaceSections = getAllowedWorkspaceSections(masterData.currentUserRoles)
+  const resolvedActiveSection = workspaceSections.includes(activeSection)
+    ? activeSection
+    : workspaceSections[0] ?? 'overview'
+  const sectionCopy: Record<WorkspaceSection, { title: string; description: string }> = {
+    overview: {
+      title: roleLabels[primaryRole],
+      description: 'Priorities, exceptions, and cycle readiness at a glance.',
     },
-    {
-      icon: IndianRupee,
-      label: 'Monthly CTC',
-      value: formatCurrency(Math.round(monthlyPayroll)),
-      detail: 'Active employees',
+    employees: {
+      title: primaryRole === 'finance' ? 'Payment profiles' : 'People directory',
+      description:
+        primaryRole === 'finance'
+          ? 'Review compensation and payment readiness for payroll processing.'
+          : 'Manage employee records, compensation history, and lifecycle status.',
     },
-    {
-      icon: Building2,
-      label: 'Departments',
-      value: String(masterData.departments.length),
-      detail: masterData.organization?.name ?? 'No organization',
+    leave: {
+      title: primaryRole === 'manager' ? 'Team leave decisions' : 'Leave management',
+      description: 'Review requests, decisions, and approval ownership.',
     },
-    {
-      icon: MapPin,
-      label: 'Locations',
-      value: String(masterData.locations.length),
-      detail: 'India setup',
+    attendance: {
+      title: primaryRole === 'manager' ? 'Team attendance' : 'Time & attendance',
+      description: 'Review payroll-impacting time inputs and period controls.',
     },
-  ]
+    payroll: {
+      title: primaryRole === 'finance' ? 'Payroll control center' : 'Payroll operations',
+      description: 'Generate, review, approve, finalize, and export payroll runs.',
+    },
+    organization: {
+      title: 'Organization settings',
+      description: 'Maintain teams, work locations, and compensation records.',
+    },
+    access: {
+      title: 'Access & roles',
+      description: 'Invite trusted users and review role assignments across the organization.',
+    },
+    audit: {
+      title: 'Audit & controls',
+      description: 'Review sensitive changes and operational activity.',
+    },
+  }
+  const activeSectionCopy = sectionCopy[resolvedActiveSection]
+  const missingBankDetails = payrollEligibleEmployees.filter(
+    (employee) => !employee.bankAccountNumber || !employee.bankRoutingCode,
+  ).length
+  const currentPayrollStatus = payrollHeaderRun
+    ? formatPayrollRunStatus(payrollHeaderRun.status)
+    : 'Not started'
+  const noticeTone = getNoticeTone(notice)
+  const noticeToneClass: Record<StatusTone, string> = {
+    danger: 'border-red-200 bg-red-50 text-red-900',
+    info: 'border-blue-200 bg-blue-50 text-blue-900',
+    neutral: 'border-slate-200 bg-slate-50 text-slate-800',
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    warning: 'border-amber-200 bg-amber-50 text-amber-950',
+  }
 
   if (isSupabaseConfigured && authState === 'checking') {
     return <AuthLoadingScreen />
   }
 
+  if (isSupabaseConfigured && session && showAccountChoice) {
+    return (
+      <AccountSwitchScreen
+        onContinue={() => window.location.replace('/app')}
+        onUseAnotherAccount={handleUseAnotherAccount}
+        session={session}
+      />
+    )
+  }
+
   if (isSupabaseConfigured && !session) {
-    return <SignInScreen />
+    return <SignInScreen onSignedIn={() => window.location.replace('/app')} />
   }
 
   if (dataState === 'loading' && dataSource === 'demo') {
@@ -3099,10 +3641,12 @@ function App() {
     masterData.currentUserRoles.every((role) => role === 'employee')
   ) {
     return (
-      <EmployeeSelfService
+      <>
+        <EmployeeSelfService
         canSignOut={isSupabaseConfigured}
         dataSourceLabel={dataSourceLabel}
         employee={selectedEmployee}
+        isDownloadingIdCard={idCardDownloadEmployeeId === selectedEmployee?.id}
         isUploadingPhoto={isUploadingSelectedPhoto}
         isSubmitting={isSubmitting}
         leaveForm={leaveForm}
@@ -3111,6 +3655,7 @@ function App() {
         masterData={masterData}
         notice={notice}
         onCancelLeave={handleCancelLeaveRequest}
+        onIdCardDownload={handleDownloadEmployeeIdCard}
         onLeaveFormChange={setLeaveForm}
         onLeaveSubmit={handleSubmitLeaveRequest}
         onPayslipDownload={handleDownloadPayslip}
@@ -3121,81 +3666,87 @@ function App() {
         onSignOut={handleSignOut}
         payslipState={payslipState}
         payslips={selectedEmployeePayslips}
-        salaryHistory={employeeSalaryHistory}
-      />
+          salaryHistory={employeeSalaryHistory}
+        />
+        <IdCardPrintAnimation
+          employee={idCardPrintJob?.employee ?? null}
+          organizationName={masterData.organization?.name}
+          stage={idCardPrintJob?.stage ?? null}
+        />
+      </>
     )
   }
 
   return (
-    <main className="min-h-dvh bg-[var(--vf-surface)] text-[var(--vf-navy)]">
+    <>
+      <main className="min-h-dvh bg-[var(--vf-surface)] text-[var(--vf-navy)]">
+      <a
+        href="#workspace-main"
+        className="fixed left-4 top-4 z-50 -translate-y-24 rounded-lg bg-[var(--vf-navy)] px-4 py-3 text-sm font-semibold text-white transition focus:translate-y-0"
+      >
+        Skip to main content
+      </a>
       <div className="flex min-h-dvh">
-        <aside className="hidden w-64 border-r border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-4 py-5 lg:block">
-          <div className="mb-8 flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--vf-navy)] text-white">
-              <Banknote size={20} aria-hidden="true" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">VetanFlow</p>
-              <p className="text-xs text-neutral-500">India payroll ops</p>
-            </div>
+        <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 border-r border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-4 py-5 lg:flex lg:flex-col">
+          <BrandLogo className="px-2" />
+
+          <div className="mx-2 my-6 rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-surface-raised)] p-3">
+            <p className="truncate text-sm font-semibold text-[var(--vf-navy)]">
+              {masterData.organization?.name ?? 'Organization'}
+            </p>
+            <p className="mt-1 text-xs text-[var(--vf-text-muted)]">{roleLabels[primaryRole]}</p>
           </div>
 
-          <nav aria-label="Primary navigation" className="space-y-1">
-            {[
-              { icon: LayoutDashboard, label: 'Command center' },
-              { icon: UsersRound, label: 'Employees' },
-              { icon: Building2, label: 'Departments' },
-              { icon: MapPin, label: 'Locations' },
-              { icon: CalendarCheck, label: 'Leave approvals' },
-              { icon: Clock3, label: 'Attendance' },
-              { icon: IndianRupee, label: 'Payroll runs' },
-              { icon: History, label: 'Audit trail' },
-            ].map((item, index) => {
-              const Icon = item.icon
+          <WorkspaceNavigation
+            activeSection={resolvedActiveSection}
+            onNavigate={handleWorkspaceNavigate}
+            roles={masterData.currentUserRoles}
+            variant="desktop"
+          />
 
-              return (
-                <a
-                  key={item.label}
-                  href="#hr-master-data"
-                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition ${
-                    index === 1
-                      ? 'border border-[color:rgba(139,94,60,0.24)] bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                      : 'border border-transparent text-neutral-600 hover:bg-neutral-100 hover:text-[var(--vf-navy)]'
-                  }`}
-                >
-                  <Icon size={17} aria-hidden="true" />
-                  {item.label}
-                </a>
-              )
-            })}
-          </nav>
+          <div className="mt-auto border-t border-[color:var(--vf-border)] px-2 pt-4">
+            <StatusBadge tone={dataState === 'error' ? 'warning' : dataSource === 'supabase' ? 'success' : 'info'}>
+              {dataSourceLabel}
+            </StatusBadge>
+          </div>
         </aside>
 
         <section className="min-w-0 flex-1">
-          <header className="sticky top-0 z-10 border-b border-[color:var(--vf-border)] bg-[color:rgba(255,250,240,0.95)] px-4 py-4 backdrop-blur md:px-8">
+          <header className="sticky top-0 z-20 border-b border-[color:var(--vf-border)] bg-[color:rgba(255,255,255,0.94)] px-4 py-4 backdrop-blur-md md:px-8">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--vf-brown)]">{dataSourceLabel}</p>
-                <h1 className="text-2xl font-semibold tracking-normal text-[var(--vf-navy)] md:text-3xl">
-                  HR master data
+              <div className="min-w-0">
+                <div className="mb-2 flex items-center gap-2 lg:hidden">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-[var(--vf-navy)] text-white">
+                    <Banknote size={16} aria-hidden="true" />
+                  </div>
+                  <p className="text-sm font-semibold">VetanFlow</p>
+                </div>
+                <p className="text-xs font-semibold uppercase text-[var(--vf-primary)]">{roleLabels[primaryRole]}</p>
+                <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[var(--vf-navy)] md:text-3xl">
+                  {activeSectionCopy.title}
                 </h1>
+                <p className="mt-1 hidden text-sm text-[var(--vf-text-muted)] sm:block">
+                  {activeSectionCopy.description}
+                </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
-                <label className="relative min-w-0 sm:w-80">
-                  <span className="sr-only">Search employees</span>
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-                    size={18}
-                    aria-hidden="true"
-                  />
-                  <input
-                    className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] pl-10 pr-3 text-sm outline-none transition placeholder:text-neutral-400 focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search employee, team, location"
-                    type="search"
-                    value={query}
-                  />
-                </label>
+                {resolvedActiveSection === 'employees' ? (
+                  <label className="relative min-w-0 sm:w-80">
+                    <span className="sr-only">Search employees</span>
+                    <Search
+                      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--vf-icon-muted)]"
+                      size={18}
+                      aria-hidden="true"
+                    />
+                    <input
+                      className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border-strong)] bg-[var(--vf-paper)] pl-10 pr-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-[var(--vf-primary)] focus:ring-3 focus:ring-[var(--vf-focus)]"
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search people, team, location"
+                      type="search"
+                      value={query}
+                    />
+                  </label>
+                ) : null}
                 <button
                   type="button"
                   onClick={() =>
@@ -3207,64 +3758,81 @@ function App() {
                       loadPayslipData(),
                     ])
                   }
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[color:var(--vf-border)] px-4 text-sm font-semibold text-[var(--vf-navy)] transition hover:bg-[var(--vf-cream)]"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-[color:var(--vf-border-strong)] bg-[var(--vf-paper)] px-4 text-sm font-semibold text-[var(--vf-navy)] transition hover:bg-[var(--vf-primary-soft)] active:scale-[0.98]"
                 >
                   <RefreshCw size={17} aria-hidden="true" />
                   Refresh
                 </button>
                 {isSupabaseConfigured ? (
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--vf-navy)] px-4 text-sm font-semibold text-white transition hover:bg-[#12395d]"
-                  >
-                    <LogOut size={17} aria-hidden="true" />
-                    Sign out
-                  </button>
+                  <>
+                    <a
+                      className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-[color:var(--vf-border-strong)] bg-[var(--vf-paper)] px-4 text-sm font-semibold text-[var(--vf-navy)] transition hover:bg-[var(--vf-primary-soft)]"
+                      href="/login"
+                    >
+                      <UserRoundCog size={17} aria-hidden="true" />
+                      Switch
+                    </a>
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-[var(--vf-navy)] px-4 text-sm font-semibold text-white transition hover:bg-[#12395d] active:scale-[0.98]"
+                    >
+                      <LogOut size={17} aria-hidden="true" />
+                      Sign out
+                    </button>
+                  </>
                 ) : null}
               </div>
             </div>
+            <div className="mt-4 lg:hidden">
+              <WorkspaceNavigation
+                activeSection={resolvedActiveSection}
+                onNavigate={handleWorkspaceNavigate}
+                roles={masterData.currentUserRoles}
+                variant="mobile"
+              />
+            </div>
           </header>
 
-          <div id="hr-master-data" className="space-y-6 px-4 py-6 md:px-8">
+          <div id="workspace-main" tabIndex={-1} className="space-y-6 px-4 py-6 outline-none md:px-8">
             {notice ? (
               <p
-                className="rounded-lg border border-[color:rgba(139,94,60,0.24)] bg-[var(--vf-cream)] px-4 py-3 text-sm font-medium text-[var(--vf-brown)]"
+                className={`rounded-lg border px-4 py-3 text-sm font-medium ${noticeToneClass[noticeTone]}`}
                 role="status"
               >
                 {notice}
               </p>
             ) : null}
 
-            <section aria-label="HR metrics" className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {metrics.map((metric) => {
-                const Icon = metric.icon
+            {resolvedActiveSection === 'overview' ? (
+              <OperationsOverview
+                activeEmployees={activeEmployees.length}
+                attendanceLocked={isAttendanceLocked}
+                departmentCount={activeDepartments.length}
+                formattedMonthlyPayroll={formatCurrency(Math.round(monthlyPayroll))}
+                headcount={masterData.employees.length}
+                locationCount={activeWorkLocations.length}
+                lossOfPayDays={attendanceTotals.lossOfPayDays}
+                missingBankDetails={missingBankDetails}
+                onNavigate={handleWorkspaceNavigate}
+                payrollStatus={currentPayrollStatus}
+                payrollWarnings={payrollVarianceWarningCount}
+                pendingLeaveRequests={pendingLeaveRequests.length}
+                primaryRole={primaryRole}
+              />
+            ) : null}
 
-                return (
-                  <article key={metric.label} className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-neutral-500">{metric.label}</p>
-                        <p className="tabular mt-2 text-2xl font-semibold text-[var(--vf-navy)]">{metric.value}</p>
-                      </div>
-                      <div className="flex size-10 items-center justify-center rounded-lg bg-[var(--vf-cream)] text-[var(--vf-brown)]">
-                        <Icon size={19} aria-hidden="true" />
-                      </div>
-                    </div>
-                    <p className="mt-4 text-sm font-medium text-neutral-600">{metric.detail}</p>
-                  </article>
-                )
-              })}
-            </section>
-
-            <section className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
-              <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] shadow-sm">
+            <section
+              aria-label="People directory"
+              className={`${resolvedActiveSection === 'employees' ? 'grid' : 'hidden'} min-w-0 gap-6 xl:grid-cols-[1.35fr_0.85fr]`}
+            >
+              <article className="min-w-0 rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] shadow-sm">
                 <div className="flex flex-col gap-3 border-b border-[color:var(--vf-border)] p-5 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Employee directory</h2>
                     <p className="mt-1 text-sm text-neutral-500">{filteredEmployees.length} records in view</p>
                   </div>
-                  <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[color:rgba(211,212,192,0.5)] px-3 py-1 text-xs font-semibold text-[var(--vf-navy)]">
+                  <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[color:rgba(231,235,240,0.5)] px-3 py-1 text-xs font-semibold text-[var(--vf-navy)]">
                     <ListChecks size={14} aria-hidden="true" />
                     {masterData.currentUserRoles.join(', ') || 'member'}
                   </span>
@@ -3272,14 +3840,14 @@ function App() {
 
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[840px] border-collapse text-left text-sm">
-                    <thead className="bg-[color:rgba(211,212,192,0.34)] text-xs uppercase text-[color:rgba(10,41,71,0.62)]">
+                    <thead className="bg-[color:rgba(231,235,240,0.34)] text-xs uppercase text-[color:rgba(10,41,71,0.62)]">
                       <tr>
                         <th className="px-5 py-3 font-semibold">Employee</th>
                         <th className="px-5 py-3 font-semibold">Department</th>
                         <th className="px-5 py-3 font-semibold">Location</th>
-                        <th className="px-5 py-3 font-semibold">Annual CTC</th>
+                        <th className="px-5 py-3 font-semibold">Annual compensation</th>
                         <th className="px-5 py-3 font-semibold">Status</th>
-                        <th className="px-5 py-3 font-semibold">Profile</th>
+                        <th className="px-5 py-3 font-semibold">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[color:var(--vf-border)]">
@@ -3287,7 +3855,7 @@ function App() {
                         const isSelected = employee.id === selectedEmployeeId
 
                         return (
-                          <tr key={employee.id} className={isSelected ? 'bg-[color:rgba(243,228,201,0.6)]' : 'transition hover:bg-[color:rgba(211,212,192,0.22)]'}>
+                          <tr key={employee.id} className={isSelected ? 'bg-[color:rgba(234,241,255,0.6)]' : 'transition hover:bg-[color:rgba(231,235,240,0.22)]'}>
                             <td className="px-5 py-4">
                               <p className="font-medium text-[var(--vf-navy)]">{employee.fullName}</p>
                               <p className="mt-1 text-xs text-neutral-500">{employee.code}</p>
@@ -3295,23 +3863,12 @@ function App() {
                             <td className="px-5 py-4 text-neutral-700">{employee.department}</td>
                             <td className="px-5 py-4 text-neutral-700">{employee.location}</td>
                             <td className="tabular px-5 py-4 font-medium text-[var(--vf-navy)]">
-                              {formatCurrency(employee.annualCtc)}
+                              {formatCurrency(employee.annualCompensation)}
                             </td>
                             <td className="px-5 py-4">
-                              <span
-                                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${
-                                  employee.status === 'active'
-                                    ? 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                                    : 'bg-amber-50 text-amber-800'
-                                }`}
-                              >
-                                {employee.status === 'active' ? (
-                                  <CheckCircle2 size={14} aria-hidden="true" />
-                                ) : (
-                                  <CircleAlert size={14} aria-hidden="true" />
-                                )}
+                              <StatusBadge tone={getEmployeeStatusTone(employee.status)}>
                                 {formatStatus(employee.status)}
-                              </span>
+                              </StatusBadge>
                             </td>
                             <td className="px-5 py-4">
                               <div className="flex flex-wrap gap-2">
@@ -3321,6 +3878,16 @@ function App() {
                                   className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[color:var(--vf-border)] px-3 text-xs font-semibold text-[var(--vf-navy)] transition hover:bg-[var(--vf-cream)]"
                                 >
                                   Open
+                                </button>
+                                <button
+                                  aria-label={`Download ${employee.fullName}'s ID card`}
+                                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[color:var(--vf-border)] px-3 text-xs font-semibold text-[var(--vf-navy)] transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-60"
+                                  disabled={idCardDownloadEmployeeId === employee.id}
+                                  onClick={() => void handleDownloadEmployeeIdCard(employee.id)}
+                                  type="button"
+                                >
+                                  <Download size={14} aria-hidden="true" />
+                                  {idCardDownloadEmployeeId === employee.id ? 'Preparing' : 'ID PDF'}
                                 </button>
                                 {canManageMasterData ? (
                                   <button
@@ -3345,6 +3912,9 @@ function App() {
               <aside className="space-y-6">
                 <EmployeeIdCard
                   employee={selectedEmployee}
+                  isDownloading={idCardDownloadEmployeeId === selectedEmployee?.id}
+                  locale={masterData.organization?.locale ?? defaultLocale}
+                  onDownload={handleDownloadEmployeeIdCard}
                   organizationName={masterData.organization?.name}
                 />
 
@@ -3370,17 +3940,17 @@ function App() {
                 <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Bank details</h2>
-                    <IndianRupee size={19} className="text-[var(--vf-brown)]" aria-hidden="true" />
+                    <WalletCards size={19} className="text-[var(--vf-primary)]" aria-hidden="true" />
                   </div>
                   {selectedEmployee ? (
                     <dl className="mt-5 grid gap-3">
                       {[
-                        ['Status', selectedEmployee.bankAccountNumber && selectedEmployee.bankIfsc ? 'Ready for export' : 'Missing details'],
+                        ['Status', selectedEmployee.bankAccountNumber && selectedEmployee.bankRoutingCode ? 'Ready for export' : 'Missing details'],
                         ['Account', maskBankAccount(selectedEmployee.bankAccountNumber)],
-                        ['IFSC', selectedEmployee.bankIfsc ?? 'Not set'],
+                        ['Routing code', selectedEmployee.bankRoutingCode ?? 'Not set'],
                         ['Bank', selectedEmployee.bankName ?? 'Not set'],
                       ].map(([label, value]) => (
-                        <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-[color:rgba(211,212,192,0.3)] px-3 py-2">
+                        <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-[color:rgba(231,235,240,0.3)] px-3 py-2">
                           <dt className="text-sm text-neutral-500">{label}</dt>
                           <dd className="text-right text-sm font-semibold text-[var(--vf-navy)]">{value}</dd>
                         </div>
@@ -3402,7 +3972,7 @@ function App() {
                         <div key={revision.id} className="rounded-lg border border-[color:var(--vf-border)] p-3">
                           <div className="flex items-center justify-between gap-3">
                             <p className="tabular text-sm font-semibold text-[var(--vf-navy)]">
-                              {formatCurrency(revision.annualCtc)}
+                              {formatCurrency(revision.annualCompensation)}
                             </p>
                             <p className="text-xs text-neutral-500">{formatDate(revision.effectiveFrom)}</p>
                           </div>
@@ -3417,7 +3987,7 @@ function App() {
               </aside>
             </section>
 
-            {canManageMasterData ? (
+            {canManageMasterData && resolvedActiveSection === 'employees' ? (
               <section className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -3438,7 +4008,7 @@ function App() {
                 </div>
 
                 {!canSaveEmployee ? (
-                  <p className="mt-5 rounded-lg border border-[color:rgba(139,94,60,0.24)] bg-[var(--vf-cream)] px-4 py-3 text-sm text-[var(--vf-brown)]">
+                  <p className="mt-5 rounded-lg border border-[color:rgba(29,95,209,0.24)] bg-[var(--vf-cream)] px-4 py-3 text-sm text-[var(--vf-brown)]">
                     Add one department and one active work location before saving employee records.
                   </p>
                 ) : null}
@@ -3453,7 +4023,7 @@ function App() {
                         clearFieldError('employeeCode')
                         setEmployeeForm((current) => ({ ...current, code: event.target.value }))
                       }}
-                      placeholder="IND-004"
+                      placeholder="VF-004"
                       required
                       value={employeeForm.code}
                     />
@@ -3570,18 +4140,18 @@ function App() {
                   </label>
 
                   <label className="block lg:col-span-1">
-                    <span className="text-sm font-medium text-neutral-800">Annual CTC</span>
+                    <span className="text-sm font-medium text-neutral-800">Annual compensation</span>
                     <input
                       className={formControlClass}
                       disabled={isEditingEmployee}
                       min={0}
-                      onChange={(event) => setEmployeeForm((current) => ({ ...current, annualCtc: event.target.value }))}
+                      onChange={(event) => setEmployeeForm((current) => ({ ...current, annualCompensation: event.target.value }))}
                       required={!isEditingEmployee}
                       type="number"
-                      value={employeeForm.annualCtc}
+                      value={employeeForm.annualCompensation}
                     />
                     <span className="mt-2 block text-xs text-neutral-500">
-                      {isEditingEmployee ? 'Use compensation for salary changes.' : 'Initial CTC creates salary history.'}
+                      {isEditingEmployee ? 'Use compensation for salary changes.' : 'Initial compensation creates salary history.'}
                     </span>
                   </label>
 
@@ -3610,7 +4180,7 @@ function App() {
                           bankName: event.target.value,
                         }))
                       }
-                      placeholder="HDFC Bank"
+                      placeholder="Example Bank"
                       value={employeeForm.bankName}
                     />
                   </label>
@@ -3619,32 +4189,33 @@ function App() {
                     <span className="text-sm font-medium text-neutral-800">Account number</span>
                     <input
                       className={formControlClass}
-                      inputMode="numeric"
+                      inputMode="text"
                       onChange={(event) =>
                         setEmployeeForm((current) => ({
                           ...current,
                           bankAccountNumber: event.target.value,
                         }))
                       }
-                      pattern="[0-9]{6,20}"
-                      placeholder="Digits only"
+                      maxLength={34}
+                      pattern="[A-Za-z0-9][A-Za-z0-9 -]{3,33}"
+                      placeholder="Account identifier"
                       value={employeeForm.bankAccountNumber}
                     />
                   </label>
 
                   <label className="block lg:col-span-2">
-                    <span className="text-sm font-medium text-neutral-800">IFSC</span>
+                    <span className="text-sm font-medium text-neutral-800">Routing code</span>
                     <input
                       className={formControlClass}
-                      maxLength={11}
+                      maxLength={34}
                       onChange={(event) =>
                         setEmployeeForm((current) => ({
                           ...current,
-                          bankIfsc: event.target.value.toUpperCase(),
+                          bankRoutingCode: event.target.value.toUpperCase(),
                         }))
                       }
-                      placeholder="HDFC0001234"
-                      value={employeeForm.bankIfsc}
+                      placeholder="Routing or clearing code"
+                      value={employeeForm.bankRoutingCode}
                     />
                   </label>
 
@@ -3676,7 +4247,7 @@ function App() {
               </section>
             ) : null}
 
-            {canReviewLeave ? (
+            {canReviewLeave && resolvedActiveSection === 'leave' ? (
               <section className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -3753,22 +4324,12 @@ function App() {
                     <h3 className="text-sm font-semibold text-[var(--vf-navy)]">Recent decisions</h3>
                     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                       {leaveData.requests.slice(0, 6).map((request) => (
-                        <div key={request.id} className="rounded-lg bg-[color:rgba(211,212,192,0.34)] px-3 py-3">
+                        <div key={request.id} className="rounded-lg bg-[color:rgba(231,235,240,0.34)] px-3 py-3">
                           <div className="flex items-center justify-between gap-3">
                             <p className="truncate text-sm font-medium text-neutral-800">{request.employeeName}</p>
-                            <span
-                              className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                request.status === 'approved'
-                                  ? 'bg-emerald-50 text-emerald-800'
-                                  : request.status === 'rejected'
-                                    ? 'bg-red-50 text-red-700'
-                                    : request.status === 'cancelled'
-                                      ? 'bg-neutral-200 text-neutral-600'
-                                      : 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                              }`}
-                            >
+                            <StatusBadge className="shrink-0" tone={getLeaveStatusTone(request.status)}>
                               {formatLeaveStatus(request.status)}
-                            </span>
+                            </StatusBadge>
                           </div>
                           <p className="mt-1 text-xs text-neutral-500">
                             {formatDate(request.startDate)} · {formatLeaveType(request.leaveType)}
@@ -3781,7 +4342,7 @@ function App() {
               </section>
             ) : null}
 
-            <section className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
+            <section className={`${resolvedActiveSection === 'attendance' ? 'block' : 'hidden'} rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm`}>
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Attendance control</h2>
@@ -3795,21 +4356,18 @@ function App() {
                   <label className="block sm:w-44">
                     <span className="text-xs font-semibold uppercase text-neutral-500">Period</span>
                     <input
-                      className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                      className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                       onChange={(event) => setAttendancePeriodMonth(fromMonthInputValue(event.target.value))}
                       type="month"
                       value={toMonthInputValue(attendancePeriodMonth)}
                     />
                   </label>
-                  <span
-                    className={`inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold ${
-                      isAttendanceLocked
-                        ? 'bg-emerald-50 text-emerald-800'
-                        : 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                    }`}
+                  <StatusBadge
+                    className="min-h-11 justify-center rounded-lg px-3 text-sm"
+                    tone={isAttendanceLocked ? 'success' : 'warning'}
                   >
                     {isAttendanceLocked ? 'Locked for payroll' : 'Open for edits'}
-                  </span>
+                  </StatusBadge>
                   {canManageAttendance ? (
                     isAttendanceLocked ? (
                       <button
@@ -3848,20 +4406,24 @@ function App() {
                     value: attendanceTotals.lossOfPayDays.toFixed(1),
                     detail: 'Leave and absence impact',
                   },
-                  {
-                    label: 'Net pay forecast',
-                    value: formatCurrency(Math.round(attendanceTotals.netPay)),
-                    detail: 'From current summaries',
-                  },
+                  ...(canViewAttendancePay
+                    ? [
+                        {
+                          label: 'Net pay forecast',
+                          value: formatCurrency(Math.round(attendanceTotals.netPay)),
+                          detail: 'From current summaries',
+                        },
+                      ]
+                    : []),
                   {
                     label: 'Holidays',
                     value: String(attendanceData.holidays.length),
-                    detail: 'India calendar in period',
+                    detail: 'Organization calendar in period',
                   },
                 ].map((metric) => (
                   <article
                     key={metric.label}
-                    className="rounded-lg border border-[color:var(--vf-border)] bg-[color:rgba(211,212,192,0.24)] p-4"
+                    className="rounded-lg border border-[color:var(--vf-border)] bg-[color:rgba(231,235,240,0.24)] p-4"
                   >
                     <p className="text-sm text-neutral-500">{metric.label}</p>
                     <p className="tabular mt-2 text-2xl font-semibold text-[var(--vf-navy)]">{metric.value}</p>
@@ -3871,22 +4433,26 @@ function App() {
               </div>
 
               <div className="mt-5 overflow-x-auto rounded-lg border border-[color:var(--vf-border)]">
-                <table className="w-full min-w-[980px] border-collapse text-left text-sm">
-                  <thead className="bg-[color:rgba(211,212,192,0.34)] text-xs uppercase text-[color:rgba(10,41,71,0.62)]">
+                <table className={`w-full ${canViewAttendancePay ? 'min-w-[980px]' : 'min-w-[680px]'} border-collapse text-left text-sm`}>
+                  <thead className="bg-[color:rgba(231,235,240,0.34)] text-xs uppercase text-[color:rgba(10,41,71,0.62)]">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Employee</th>
                       <th className="px-4 py-3 font-semibold">Present</th>
                       <th className="px-4 py-3 font-semibold">Paid leave</th>
                       <th className="px-4 py-3 font-semibold">LOP</th>
                       <th className="px-4 py-3 font-semibold">Payable</th>
-                      <th className="px-4 py-3 font-semibold">Deduction</th>
-                      <th className="px-4 py-3 font-semibold">Net preview</th>
+                      {canViewAttendancePay ? (
+                        <>
+                          <th className="px-4 py-3 font-semibold">Deduction</th>
+                          <th className="px-4 py-3 font-semibold">Net preview</th>
+                        </>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[color:var(--vf-border)]">
                     {attendanceData.summaries.length ? (
                       attendanceData.summaries.map((summary) => (
-                        <tr key={summary.employeeId} className="transition hover:bg-[color:rgba(211,212,192,0.18)]">
+                        <tr key={summary.employeeId} className="transition hover:bg-[color:rgba(231,235,240,0.18)]">
                           <td className="px-4 py-3">
                             <p className="font-medium text-[var(--vf-navy)]">{summary.employeeName}</p>
                             <p className="mt-1 text-xs text-neutral-500">{summary.employeeCode}</p>
@@ -3895,17 +4461,21 @@ function App() {
                           <td className="tabular px-4 py-3">{summary.paidLeaveDays}</td>
                           <td className="tabular px-4 py-3">{summary.lossOfPayDays}</td>
                           <td className="tabular px-4 py-3">{summary.payableDays}</td>
-                          <td className="tabular px-4 py-3">
-                            {formatCurrency(Math.round(summary.payrollPreview.unpaidLeaveDeduction))}
-                          </td>
-                          <td className="tabular px-4 py-3 font-semibold text-[var(--vf-navy)]">
-                            {formatCurrency(Math.round(summary.payrollPreview.netPay))}
-                          </td>
+                          {canViewAttendancePay ? (
+                            <>
+                              <td className="tabular px-4 py-3">
+                                {formatCurrency(Math.round(summary.payrollPreview.unpaidLeaveDeduction))}
+                              </td>
+                              <td className="tabular px-4 py-3 font-semibold text-[var(--vf-navy)]">
+                                {formatCurrency(Math.round(summary.payrollPreview.netPay))}
+                              </td>
+                            </>
+                          ) : null}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td className="px-4 py-5 text-sm text-neutral-500" colSpan={7}>
+                        <td className="px-4 py-5 text-sm text-neutral-500" colSpan={canViewAttendancePay ? 7 : 5}>
                           No attendance summaries are visible for this period.
                         </td>
                       </tr>
@@ -4041,7 +4611,7 @@ function App() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-semibold text-[var(--vf-navy)]">Holiday calendar</h3>
-                      <p className="mt-1 text-xs text-neutral-500">India-first payroll holidays for this period.</p>
+                      <p className="mt-1 text-xs text-neutral-500">Organization holidays configured for this period.</p>
                     </div>
                     <CalendarCheck size={18} className="text-[var(--vf-brown)]" aria-hidden="true" />
                   </div>
@@ -4088,7 +4658,7 @@ function App() {
                       attendanceData.holidays.map((holiday) => (
                         <div
                           key={holiday.id}
-                          className="flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[color:rgba(211,212,192,0.34)] px-3"
+                          className="flex min-h-11 items-center justify-between gap-3 rounded-lg bg-[color:rgba(231,235,240,0.34)] px-3"
                         >
                           <p className="truncate text-sm font-medium text-[var(--vf-navy)]">{holiday.name}</p>
                           <p className="shrink-0 text-xs text-neutral-500">{formatDate(holiday.holidayDate)}</p>
@@ -4102,7 +4672,7 @@ function App() {
               </div>
             </section>
 
-            <section className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
+            <section className={`${resolvedActiveSection === 'payroll' ? 'block' : 'hidden'} rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm`}>
               <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Payroll runs</h2>
@@ -4115,19 +4685,16 @@ function App() {
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <span
-                    className={`inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold ${
-                      isPayrollHeaderAttendanceLocked
-                        ? 'bg-emerald-50 text-emerald-800'
-                        : 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                    }`}
+                  <StatusBadge
+                    className="min-h-11 justify-center rounded-lg px-3 text-sm"
+                    tone={isPayrollHeaderAttendanceLocked ? 'success' : 'warning'}
                   >
                     {isPayrollHeaderAttendanceLocked
                       ? payrollHeaderRun
                         ? 'Run attendance locked'
                         : 'Attendance locked'
                       : 'Lock attendance first'}
-                  </span>
+                  </StatusBadge>
                   {payrollHeaderRun ? (
                     <button
                       type="button"
@@ -4199,7 +4766,7 @@ function App() {
                 ].map((metric) => (
                   <article
                     key={metric.label}
-                    className="rounded-lg border border-[color:var(--vf-border)] bg-[color:rgba(211,212,192,0.24)] p-4"
+                    className="rounded-lg border border-[color:var(--vf-border)] bg-[color:rgba(231,235,240,0.24)] p-4"
                   >
                     <p className="text-sm text-neutral-500">{metric.label}</p>
                     <p className="tabular mt-2 text-xl font-semibold text-[var(--vf-navy)]">{metric.value}</p>
@@ -4218,7 +4785,7 @@ function App() {
                     <label className="min-w-40">
                       <span className="sr-only">Filter payroll runs by period</span>
                       <select
-                        className="min-h-10 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm font-semibold text-[var(--vf-navy)] outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                        className="min-h-10 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm font-semibold text-[var(--vf-navy)] outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                         onChange={(event) => {
                           setPayrollRunPeriodFilter(event.target.value)
                           setSelectedPayrollRun(null)
@@ -4243,7 +4810,7 @@ function App() {
                           onClick={() => void handleOpenPayrollRun(run.id)}
                           className={`flex min-h-16 w-full items-center justify-between gap-3 rounded-lg border px-3 text-left transition hover:bg-[var(--vf-cream)] ${
                             selectedPayrollRun?.id === run.id
-                              ? 'border-[color:rgba(139,94,60,0.36)] bg-[var(--vf-cream)]'
+                              ? 'border-[color:rgba(29,95,209,0.36)] bg-[var(--vf-cream)]'
                               : 'border-[color:var(--vf-border)] bg-[var(--vf-paper)]'
                           }`}
                         >
@@ -4252,8 +4819,11 @@ function App() {
                               {formatDate(run.periodStart)}
                             </span>
                             <span className="mt-1 block text-xs text-neutral-500">
-                              {run.lineCount} lines · {formatPayrollRunStatus(run.status)}
+                              {run.lineCount} payroll lines
                             </span>
+                            <StatusBadge className="mt-2" tone={getPayrollStatusTone(run.status)}>
+                              {formatPayrollRunStatus(run.status)}
+                            </StatusBadge>
                           </span>
                           <span className="tabular text-sm font-semibold text-[var(--vf-navy)]">
                             {formatCurrency(Math.round(run.netPay))}
@@ -4289,7 +4859,7 @@ function App() {
                   </div>
 
                   {displayedPayrollRun ? (
-                    <div className="mt-4 flex flex-wrap gap-2 rounded-lg bg-[color:rgba(211,212,192,0.24)] p-3">
+                    <div className="mt-4 flex flex-wrap gap-2 rounded-lg bg-[color:rgba(231,235,240,0.24)] p-3">
                       <button
                         type="button"
                         onClick={() => void handleRecalculatePayrollRun(displayedPayrollRun.id)}
@@ -4343,7 +4913,7 @@ function App() {
                       </button>
                       {[
                         ['bank', 'Bank CSV'],
-                        ['statutory', 'Statutory CSV'],
+                        ['deductions', 'Deductions CSV'],
                         ['department-cost', 'Cost CSV'],
                       ].map(([exportType, label]) => (
                         <button
@@ -4370,7 +4940,7 @@ function App() {
                   {selectedPayrollRun ? (
                     <form
                       onSubmit={handleAddPayrollAdjustment}
-                      className="mt-4 rounded-lg border border-[color:var(--vf-border)] bg-[color:rgba(211,212,192,0.18)] p-4"
+                      className="mt-4 rounded-lg border border-[color:var(--vf-border)] bg-[color:rgba(231,235,240,0.18)] p-4"
                     >
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -4529,7 +5099,7 @@ function App() {
 
                   <div className="mt-4 overflow-x-auto rounded-lg border border-[color:var(--vf-border)]">
                     <table className="w-full min-w-[1240px] border-collapse text-left text-sm">
-                      <thead className="bg-[color:rgba(211,212,192,0.34)] text-xs uppercase text-[color:rgba(10,41,71,0.62)]">
+                      <thead className="bg-[color:rgba(231,235,240,0.34)] text-xs uppercase text-[color:rgba(10,41,71,0.62)]">
                         <tr>
                           <th className="px-4 py-3 font-semibold">Employee</th>
                           <th className="px-4 py-3 font-semibold">Gross</th>
@@ -4552,7 +5122,7 @@ function App() {
                               adjustmentTotals.deductions
 
                             return (
-                              <tr key={line.id} className="transition hover:bg-[color:rgba(211,212,192,0.18)]">
+                              <tr key={line.id} className="transition hover:bg-[color:rgba(231,235,240,0.18)]">
                                 <td className="px-4 py-3 align-top">
                                   <p className="font-medium text-[var(--vf-navy)]">{line.employeeName}</p>
                                   <p className="mt-1 text-xs text-neutral-500">{line.employeeCode}</p>
@@ -4673,7 +5243,152 @@ function App() {
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-3">
+            <section className={`${resolvedActiveSection === 'organization' ? 'grid' : 'hidden'} gap-6 xl:grid-cols-3`}>
+              <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm xl:col-span-3">
+                <div className="flex flex-col gap-4 border-b border-[color:var(--vf-border)] pb-5 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Organization preferences</h2>
+                    <p className="mt-1 text-sm leading-6 text-[var(--vf-text-muted)]">
+                      These defaults control payroll currency, document formatting, and reporting cutoffs.
+                    </p>
+                  </div>
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--vf-primary-soft)] text-[var(--vf-primary)]">
+                    <Globe2 size={19} aria-hidden="true" />
+                  </div>
+                </div>
+
+                {canManageOrganizationPreferences ? (
+                  <form onSubmit={handleSaveOrganization} className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                    <label className="block xl:col-span-2">
+                      <span className="text-sm font-medium text-slate-800">Organization name</span>
+                      <input
+                        className={`${formControlClass} mt-2`}
+                        maxLength={120}
+                        onChange={(event) =>
+                          setOrganizationForm((current) => ({ ...current, name: event.target.value }))
+                        }
+                        required
+                        value={organizationForm.name}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-800">Country</span>
+                      <select
+                        className={formControlClass}
+                        onChange={(event) => {
+                          const country = getCountryOption(event.target.value)
+
+                          if (!country) {
+                            return
+                          }
+
+                          setOrganizationForm((current) => ({
+                            ...current,
+                            countryCode: country.code,
+                            currencyCode: country.currencyCode,
+                            locale: country.locale,
+                            timezone: country.timezones[0],
+                          }))
+                        }}
+                        required
+                        value={organizationForm.countryCode}
+                      >
+                        {countryOptions.map((country) => (
+                          <option key={country.code} value={country.code}>{country.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-800">Currency</span>
+                      <select
+                        className={formControlClass}
+                        onChange={(event) =>
+                          setOrganizationForm((current) => ({ ...current, currencyCode: event.target.value }))
+                        }
+                        required
+                        value={organizationForm.currencyCode}
+                      >
+                        {currencyOptions.map((currency) => (
+                          <option key={currency.code} value={currency.code}>{currency.code} - {currency.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-800">Locale</span>
+                      <select
+                        className={formControlClass}
+                        onChange={(event) =>
+                          setOrganizationForm((current) => ({ ...current, locale: event.target.value }))
+                        }
+                        required
+                        value={organizationForm.locale}
+                      >
+                        {localeOptions.map((locale) => (
+                          <option key={locale.code} value={locale.code}>{locale.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block md:col-span-2 xl:col-span-3">
+                      <span className="text-sm font-medium text-slate-800">Timezone</span>
+                      <select
+                        className={formControlClass}
+                        onChange={(event) =>
+                          setOrganizationForm((current) => ({ ...current, timezone: event.target.value }))
+                        }
+                        required
+                        value={organizationForm.timezone}
+                      >
+                        {timezoneOptions.map((timezone) => (
+                          <option key={timezone} value={timezone}>{timezone.replaceAll('_', ' ')}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className="flex items-end md:col-span-2 xl:col-span-2">
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--vf-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--vf-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <CheckCircle2 size={17} aria-hidden="true" />
+                        {isSubmitting ? 'Saving settings' : 'Save preferences'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                    {[
+                      ['Organization', organizationForm.name],
+                      ['Country', organizationFormCountry?.label ?? organizationForm.countryCode],
+                      ['Currency', organizationForm.currencyCode],
+                      ['Locale', organizationForm.locale],
+                      ['Timezone', organizationForm.timezone],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg bg-[var(--vf-surface-raised)] p-3">
+                        <dt className="text-xs font-semibold uppercase text-[var(--vf-text-muted)]">{label}</dt>
+                        <dd className="mt-1 break-words text-sm font-semibold text-[var(--vf-navy)]">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+                <div className="mt-5 grid gap-3 border-t border-[color:var(--vf-border)] pt-5 md:grid-cols-3">
+                  <div className="rounded-lg bg-[var(--vf-surface-raised)] p-4">
+                    <p className="text-xs font-semibold uppercase text-[var(--vf-primary)]">Payroll automation</p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--vf-navy)]">{organizationPreferencePreview.currency}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--vf-text-muted)]">New runs, reports, and payslips use {organizationForm.currencyCode}.</p>
+                  </div>
+                  <div className="rounded-lg bg-[var(--vf-surface-raised)] p-4">
+                    <p className="text-xs font-semibold uppercase text-[var(--vf-primary)]">Document automation</p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--vf-navy)]">{organizationPreferencePreview.date}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--vf-text-muted)]">ID cards and payroll documents follow {organizationForm.locale}.</p>
+                  </div>
+                  <div className="rounded-lg bg-[var(--vf-surface-raised)] p-4">
+                    <p className="text-xs font-semibold uppercase text-[var(--vf-primary)]">Reporting cutoff</p>
+                    <p className="mt-2 text-sm font-semibold text-[var(--vf-navy)]">{organizationPreferencePreview.time}</p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--vf-text-muted)]">Attendance periods and operating dates follow {organizationForm.timezone.replaceAll('_', ' ')}.</p>
+                  </div>
+                </div>
+              </article>
+
               <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Departments</h2>
@@ -4683,19 +5398,13 @@ function App() {
                   {masterData.departments.map((department) => (
                     <div
                       key={department.id}
-                      className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-[color:rgba(211,212,192,0.34)] px-3 py-2"
+                      className="flex min-h-12 items-center justify-between gap-3 rounded-lg bg-[color:rgba(231,235,240,0.34)] px-3 py-2"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-neutral-800">{department.name}</p>
-                        <span
-                          className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                            department.isActive
-                              ? 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                              : 'bg-neutral-200 text-neutral-600'
-                          }`}
-                        >
+                        <StatusBadge className="mt-1" tone={department.isActive ? 'success' : 'neutral'}>
                           {department.isActive ? 'Active' : 'Archived'}
-                        </span>
+                        </StatusBadge>
                       </div>
                       {canManageMasterData ? (
                         <div className="flex shrink-0 gap-1">
@@ -4726,7 +5435,7 @@ function App() {
                     <label className="block">
                       <span className="sr-only">Department name</span>
                       <input
-                        className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                        className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                         aria-invalid={Boolean(fieldErrors.departmentName)}
                         onChange={(event) => {
                           clearFieldError('departmentName')
@@ -4785,22 +5494,16 @@ function App() {
                 </div>
                 <div className="mt-5 space-y-2">
                   {masterData.locations.map((location) => (
-                    <div key={location.id} className="rounded-lg bg-[color:rgba(211,212,192,0.34)] px-3 py-3">
+                    <div key={location.id} className="rounded-lg bg-[color:rgba(231,235,240,0.34)] px-3 py-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-neutral-800">{location.name}</p>
                           <p className="mt-1 text-xs text-neutral-500">
                             {location.city}, {location.state}
                           </p>
-                          <span
-                            className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              location.isActive
-                                ? 'bg-[var(--vf-cream)] text-[var(--vf-brown)]'
-                                : 'bg-neutral-200 text-neutral-600'
-                            }`}
-                          >
+                          <StatusBadge className="mt-2" tone={location.isActive ? 'success' : 'neutral'}>
                             {location.isActive ? 'Active' : 'Archived'}
-                          </span>
+                          </StatusBadge>
                         </div>
                         {canManageMasterData ? (
                           <div className="flex shrink-0 gap-1">
@@ -4832,7 +5535,7 @@ function App() {
                     <label className="block">
                       <span className="sr-only">Location name</span>
                       <input
-                        className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                        className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                         aria-invalid={Boolean(fieldErrors.locationName)}
                         onChange={(event) => {
                           clearFieldError('locationName')
@@ -4852,7 +5555,7 @@ function App() {
                       <label>
                         <span className="sr-only">City</span>
                         <input
-                          className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                          className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                           onChange={(event) => setLocationForm((current) => ({ ...current, city: event.target.value }))}
                           placeholder="City"
                           required
@@ -4862,7 +5565,7 @@ function App() {
                       <label>
                         <span className="sr-only">State</span>
                         <input
-                          className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                          className="min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                           onChange={(event) => setLocationForm((current) => ({ ...current, state: event.target.value }))}
                           placeholder="State"
                           required
@@ -4909,25 +5612,25 @@ function App() {
               <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-4">
                   <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Compensation</h2>
-                  <IndianRupee size={19} className="text-neutral-400" aria-hidden="true" />
+                  <WalletCards size={19} className="text-neutral-400" aria-hidden="true" />
                 </div>
                 {canRecordSalary && selectedEmployee ? (
                   <form onSubmit={handleRecordSalary} className="mt-5 space-y-3">
                     <label className="block">
-                      <span className="text-sm font-medium text-neutral-800">Annual CTC</span>
+                      <span className="text-sm font-medium text-neutral-800">Annual compensation</span>
                       <input
-                        className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                        className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                         min={0}
-                        onChange={(event) => setSalaryForm((current) => ({ ...current, annualCtc: event.target.value }))}
+                        onChange={(event) => setSalaryForm((current) => ({ ...current, annualCompensation: event.target.value }))}
                         required
                         type="number"
-                        value={salaryForm.annualCtc}
+                        value={salaryForm.annualCompensation}
                       />
                     </label>
                     <label className="block">
                       <span className="text-sm font-medium text-neutral-800">Effective date</span>
                       <input
-                        className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                        className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                         onChange={(event) => setSalaryForm((current) => ({ ...current, effectiveFrom: event.target.value }))}
                         required
                         type="date"
@@ -4937,7 +5640,7 @@ function App() {
                     <label className="block">
                       <span className="text-sm font-medium text-neutral-800">Reason</span>
                       <input
-                        className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                        className="mt-2 min-h-11 w-full rounded-lg border border-[color:var(--vf-border)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                         onChange={(event) => setSalaryForm((current) => ({ ...current, reason: event.target.value }))}
                         required
                         value={salaryForm.reason}
@@ -4960,7 +5663,139 @@ function App() {
               </article>
             </section>
 
-            <section className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm">
+            {canManageAccess && resolvedActiveSection === 'access' ? (
+              <section className="grid gap-6 xl:grid-cols-[0.72fr_1.28fr]">
+                <article className="rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-[var(--vf-shadow-sm)]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Invite a member</h2>
+                      <p className="mt-1 text-sm leading-6 text-[var(--vf-text-muted)]">
+                        Send a secure invitation and assign the member's starting role.
+                      </p>
+                    </div>
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--vf-primary-soft)] text-[var(--vf-primary)]">
+                      <UserPlus size={19} aria-hidden="true" />
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleInviteUser} className="mt-5 space-y-4">
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-800">Full name</span>
+                      <input
+                        autoComplete="name"
+                        className={formControlClass}
+                        maxLength={120}
+                        onChange={(event) =>
+                          setInvitationForm((current) => ({ ...current, fullName: event.target.value }))
+                        }
+                        required
+                        value={invitationForm.fullName}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-800">Work email</span>
+                      <input
+                        autoComplete="email"
+                        className={formControlClass}
+                        onChange={(event) =>
+                          setInvitationForm((current) => ({ ...current, email: event.target.value }))
+                        }
+                        required
+                        type="email"
+                        value={invitationForm.email}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-800">Role</span>
+                      <select
+                        className={formControlClass}
+                        onChange={(event) =>
+                          setInvitationForm((current) => ({
+                            ...current,
+                            role: event.target.value as InvitationFormState['role'],
+                          }))
+                        }
+                        value={invitationForm.role}
+                      >
+                        {assignableInvitationRoles.map((role) => (
+                          <option key={role} value={role}>{invitationRoleLabels[role]}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !isSupabaseConfigured}
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[var(--vf-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--vf-primary-hover)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Mail size={17} aria-hidden="true" />
+                      {isSubmitting ? 'Sending invitation' : 'Send invitation'}
+                    </button>
+                    {!isSupabaseConfigured ? (
+                      <p className="text-xs leading-5 text-[var(--vf-text-muted)]">
+                        Connect Supabase Auth to send real invitations.
+                      </p>
+                    ) : null}
+                  </form>
+                </article>
+
+                <article className="min-w-0 rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] shadow-[var(--vf-shadow-sm)]">
+                  <div className="flex flex-col gap-3 border-b border-[color:var(--vf-border)] p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Organization members</h2>
+                      <p className="mt-1 text-sm text-[var(--vf-text-muted)]">
+                        {accessState === 'loading'
+                          ? 'Loading access assignments'
+                          : `${organizationMembers.length} member${organizationMembers.length === 1 ? '' : 's'}`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void loadOrganizationMembers()}
+                      disabled={accessState === 'loading' || !isSupabaseConfigured}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[color:var(--vf-border-strong)] px-3 text-xs font-semibold text-[var(--vf-navy)] transition hover:bg-[var(--vf-primary-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <RefreshCw size={14} aria-hidden="true" />
+                      Refresh
+                    </button>
+                  </div>
+
+                  {accessState === 'error' ? (
+                    <div className="m-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                      Member access could not be loaded. Confirm the backend service key and try again.
+                    </div>
+                  ) : organizationMembers.length ? (
+                    <div className="divide-y divide-[color:var(--vf-border)]">
+                      {organizationMembers.map((member) => (
+                        <div key={member.userId} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[var(--vf-navy)]">{member.fullName}</p>
+                            <p className="mt-1 truncate text-sm text-[var(--vf-text-muted)]">{member.email}</p>
+                            <p className="mt-1 text-xs text-slate-400">Added {formatDate(member.createdAt)}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {member.roles.length ? (
+                              member.roles.map((role) => (
+                                <StatusBadge key={role} tone={role === 'employee' ? 'neutral' : 'info'}>
+                                  {formatLabel(role)}
+                                </StatusBadge>
+                              ))
+                            ) : (
+                              <StatusBadge tone="warning">Role pending</StatusBadge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-sm text-[var(--vf-text-muted)]">
+                      {accessState === 'loading' ? 'Loading members...' : 'No organization members are available yet.'}
+                    </div>
+                  )}
+                </article>
+              </section>
+            ) : null}
+
+            <section className={`${resolvedActiveSection === 'audit' ? 'block' : 'hidden'} rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] p-5 shadow-sm`}>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--vf-navy)]">Audit trail</h2>
@@ -4975,7 +5810,7 @@ function App() {
                       Entity
                     </span>
                     <select
-                      className="mt-2 min-h-10 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                      className="mt-2 min-h-10 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                       onChange={(event) => setAuditEntityFilter(event.target.value as AuditEntityFilter)}
                       value={auditEntityFilter}
                     >
@@ -4992,7 +5827,7 @@ function App() {
                       Employee
                     </span>
                     <select
-                      className="mt-2 min-h-10 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(139,94,60,0.18)]"
+                      className="mt-2 min-h-10 w-full rounded-lg border border-[color:var(--vf-border)] bg-[var(--vf-paper)] px-3 text-sm outline-none transition focus:border-[var(--vf-brown)] focus:ring-3 focus:ring-[color:rgba(29,95,209,0.18)]"
                       onChange={(event) => setAuditEmployeeFilter(event.target.value)}
                       value={auditEmployeeFilter}
                     >
@@ -5024,8 +5859,22 @@ function App() {
           </div>
         </section>
       </div>
-    </main>
+      </main>
+      <IdCardPrintAnimation
+        employee={idCardPrintJob?.employee ?? null}
+        organizationName={masterData.organization?.name}
+        stage={idCardPrintJob?.stage ?? null}
+      />
+    </>
   )
+}
+
+function App() {
+  if (window.location.pathname.startsWith('/login')) {
+    return <WorkspaceApp forceAccountChoice />
+  }
+
+  return window.location.pathname.startsWith('/app') ? <WorkspaceApp /> : <PublicSite />
 }
 
 export default App

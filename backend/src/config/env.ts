@@ -5,8 +5,13 @@ const optionalUrl = z.preprocess((value) => (value === '' ? undefined : value), 
 
 const envSchema = z.object({
   NODE_ENV: z.string().default('development'),
+  PAYROLL_CURRENCY: z.string().length(3).default('USD'),
+  PAYROLL_LOCALE: z.string().default('en-US'),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  SENTRY_DSN: optionalUrl,
+  SENTRY_ENVIRONMENT: optionalString,
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.05),
   SUPABASE_URL: optionalUrl,
   SUPABASE_PUBLISHABLE_KEY: optionalString,
   SUPABASE_ANON_KEY: optionalString,
@@ -26,9 +31,44 @@ const corsOrigins =
     ? configuredCorsOrigins
     : Array.from(new Set([...configuredCorsOrigins, ...localCorsOrigins]))
 
+if (parsed.NODE_ENV === 'production') {
+  const missingSupabaseValues = [
+    ['SUPABASE_URL', parsed.SUPABASE_URL],
+    ['SUPABASE_PUBLISHABLE_KEY', publishableKey],
+    ['SUPABASE_SERVICE_ROLE_KEY', serviceRoleKey],
+  ]
+    .filter(([, value]) => !value)
+    .map(([name]) => name)
+
+  if (missingSupabaseValues.length) {
+    throw new Error(`Production configuration is missing: ${missingSupabaseValues.join(', ')}`)
+  }
+
+  if (!process.env.CORS_ORIGIN || configuredCorsOrigins.includes('*')) {
+    throw new Error('Production CORS_ORIGIN must explicitly list the trusted frontend origin(s)')
+  }
+
+  for (const origin of configuredCorsOrigins) {
+    const parsedOrigin = new URL(origin)
+
+    if (!['http:', 'https:'].includes(parsedOrigin.protocol) || parsedOrigin.origin !== origin) {
+      throw new Error(`CORS_ORIGIN must contain origin-only HTTP(S) URLs: ${origin}`)
+    }
+  }
+}
+
 export const env = {
   port: parsed.PORT,
   corsOrigins,
+  payroll: {
+    currencyCode: parsed.PAYROLL_CURRENCY.toUpperCase(),
+    locale: parsed.PAYROLL_LOCALE,
+  },
+  sentry: {
+    dsn: parsed.SENTRY_DSN,
+    environment: parsed.SENTRY_ENVIRONMENT ?? parsed.NODE_ENV,
+    tracesSampleRate: parsed.SENTRY_TRACES_SAMPLE_RATE,
+  },
   supabase:
     parsed.SUPABASE_URL || publishableKey || serviceRoleKey
       ? {

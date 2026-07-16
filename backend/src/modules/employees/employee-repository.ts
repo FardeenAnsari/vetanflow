@@ -12,7 +12,7 @@ type EmployeeResult<T> = {
 }
 
 export const employeeCreateSchema = z.object({
-  annualCtc: z.number().min(0).default(0),
+  annualCompensation: z.number().min(0).default(0),
   departmentId: postgresUuidSchema.optional(),
   designation: z.string().min(2).max(120),
   employeeCode: z.string().min(2).max(40),
@@ -34,7 +34,7 @@ type EmployeeRow = {
   full_name: string
   designation: string
   location: string
-  annual_ctc: string | number
+  annual_compensation?: string | number
   status: Employee['status']
   departments: { name: string } | { name: string }[] | null
 }
@@ -58,7 +58,7 @@ function toEmployee(row: EmployeeRow): Employee {
     department: department?.name ?? 'Unassigned',
     role: row.designation,
     location: row.location,
-    annualCtc: Number(row.annual_ctc),
+    annualCompensation: Number(row.annual_compensation ?? 0),
     status: row.status,
   }
 }
@@ -81,7 +81,6 @@ export function createEmployeeRepository(): EmployeeRepository {
             full_name,
             designation,
             location,
-            annual_ctc,
             status,
             departments(name)
           `,
@@ -114,7 +113,6 @@ export function createEmployeeRepository(): EmployeeRepository {
             full_name,
             designation,
             location,
-            annual_ctc,
             status,
             departments(name)
           `,
@@ -149,7 +147,7 @@ export function createEmployeeRepository(): EmployeeRepository {
       const { data, error } = await supabase
         .from('employees')
         .insert({
-          annual_ctc: input.annualCtc,
+          annual_compensation: input.annualCompensation,
           department_id: input.departmentId,
           designation: input.designation,
           employee_code: input.employeeCode,
@@ -169,7 +167,7 @@ export function createEmployeeRepository(): EmployeeRepository {
             full_name,
             designation,
             location,
-            annual_ctc,
+            annual_compensation,
             status,
             departments(name)
           `,

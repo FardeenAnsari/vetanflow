@@ -27,7 +27,7 @@ function darkenColor(hex: string, percent: number) {
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`
 }
 
-export function Folder({ className = '', color = '#8B5E3C', items = [], size = 1 }: FolderProps) {
+export function Folder({ className = '', color = '#1D5FD1', items = [], size = 1 }: FolderProps) {
   const maxItems = 3
   const papers = items.slice(0, maxItems)
   const [open, setOpen] = useState(false)

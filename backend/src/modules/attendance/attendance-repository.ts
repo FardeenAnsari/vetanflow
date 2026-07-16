@@ -27,7 +27,7 @@ const attendanceStatuses = [
 export type AttendanceStatus = (typeof attendanceStatuses)[number]
 
 export type AttendanceEmployee = {
-  annualCtc: number
+  annualCompensation: number
   code: string
   fullName: string
   id: string
@@ -117,7 +117,7 @@ export const holidayCreateSchema = z.object({
   holidayDate: z.iso.date(),
   name: z.string().trim().min(2).max(120),
   organizationId: postgresUuidSchema,
-  region: z.string().trim().min(2).max(12).default('IN'),
+  region: z.string().trim().min(2).max(24).default('GLOBAL'),
 })
 
 export const attendanceMonthLockSchema = z.object({
@@ -140,6 +140,7 @@ export class AttendanceWriteError extends Error {
 }
 
 type ProfileRow = {
+  id: string
   organization_id: string | null
   organizations: { id: string; name: string } | { id: string; name: string }[] | null
 }
@@ -149,11 +150,13 @@ type RoleRow = {
 }
 
 type EmployeeRow = {
-  annual_ctc: number
+  annual_compensation: number
   employee_code: string
   full_name: string
   id: string
+  manager_profile_id: string | null
   organization_id: string
+  profile_id: string | null
 }
 
 type AttendanceEntryRow = {
@@ -302,7 +305,7 @@ function roundDay(value: number) {
 
 function toAttendanceEmployee(row: EmployeeRow): AttendanceEmployee {
   return {
-    annualCtc: row.annual_ctc,
+    annualCompensation: row.annual_compensation,
     code: row.employee_code,
     fullName: row.full_name,
     id: row.id,
@@ -453,7 +456,7 @@ export function buildAttendanceSummaries(
     }
 
     const payrollPreview = calculatePayrollPreview({
-      annualCtc: employee.annualCtc,
+      annualCompensation: employee.annualCompensation,
       bonusAmount: 0,
       employeeId: employee.id,
       overtimeAmount: 0,
@@ -487,7 +490,7 @@ export function buildAttendanceSummaries(
 function getFallbackDashboard(periodMonth?: string): AttendanceDashboard {
   const period = getMonthBounds(periodMonth)
   const attendanceEmployees = fixtureEmployees.map((employee) => ({
-    annualCtc: employee.annualCtc,
+    annualCompensation: employee.annualCompensation,
     code: employee.code,
     fullName: employee.fullName,
     id: employee.id,
@@ -495,16 +498,10 @@ function getFallbackDashboard(periodMonth?: string): AttendanceDashboard {
   }))
   const holidays = [
     {
-      holidayDate: '2026-08-15',
-      id: 'holiday_independence_day',
-      name: 'Independence Day',
-      region: 'IN',
-    },
-    {
-      holidayDate: '2026-10-02',
-      id: 'holiday_gandhi_jayanti',
-      name: 'Gandhi Jayanti',
-      region: 'IN',
+      holidayDate: '2026-09-18',
+      id: 'holiday_company_day',
+      name: 'Company day',
+      region: 'GLOBAL',
     },
   ].filter((holiday) => holiday.holidayDate >= period.startDate && holiday.holidayDate <= period.endDate)
 
@@ -516,7 +513,7 @@ function getFallbackDashboard(periodMonth?: string): AttendanceDashboard {
     locks: [],
     organization: {
       id: '00000000-0000-0000-0000-000000000001',
-      name: 'VetanFlow Demo India',
+      name: 'VetanFlow Labs',
     },
     period,
     summaries: buildAttendanceSummaries(attendanceEmployees, [], holidays, [], period),
@@ -557,7 +554,7 @@ async function assertMonthIsOpen(supabase: ServiceClient, organizationId: string
 async function getEmployee(supabase: ServiceClient, employeeId: string) {
   const { data, error } = await supabase
     .from('employees')
-    .select('id, organization_id, employee_code, full_name, annual_ctc')
+    .select('id, organization_id, employee_code, full_name, annual_compensation')
     .eq('id', employeeId)
     .maybeSingle()
 
@@ -579,61 +576,15 @@ export function createAttendanceRepository(): AttendanceRepository {
       }
 
       const db = supabase as any
-      const [profileResult, rolesResult, employeesResult, entriesResult, holidaysResult, locksResult, leavesResult] =
-        await Promise.all([
-          supabase
-            .from('profiles')
-            .select('organization_id, organizations(id, name)')
-            .single(),
-          supabase.from('user_roles').select('role').order('role'),
-          supabase
-            .from('employees')
-            .select('id, organization_id, employee_code, full_name, annual_ctc')
-            .order('employee_code', { ascending: true }),
-          db
-            .from('attendance_entries')
-            .select(
-              `
-                attendance_status,
-                employee_id,
-                id,
-                notes,
-                overtime_hours,
-                payable_hours,
-                work_date,
-                employees(employee_code, full_name)
-              `,
-            )
-            .gte('work_date', period.startDate)
-            .lte('work_date', period.endDate)
-            .order('work_date', { ascending: true }),
-          supabase
-            .from('holidays')
-            .select('holiday_date, id, name, region')
-            .gte('holiday_date', period.startDate)
-            .lte('holiday_date', period.endDate)
-            .order('holiday_date', { ascending: true }),
-          db
-            .from('attendance_month_locks')
-            .select('id, locked_at, locked_by, notes, period_month')
-            .eq('period_month', period.month),
-          supabase
-            .from('leave_requests')
-            .select('employee_id, end_date, leave_type, start_date')
-            .eq('status', 'approved')
-            .lte('start_date', period.endDate)
-            .gte('end_date', period.startDate),
-        ])
+      const [profileResult, rolesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, organization_id, organizations(id, name)')
+          .single(),
+        supabase.from('user_roles').select('role').order('role'),
+      ])
 
-      for (const result of [
-        profileResult,
-        rolesResult,
-        employeesResult,
-        entriesResult,
-        holidaysResult,
-        locksResult,
-        leavesResult,
-      ]) {
+      for (const result of [profileResult, rolesResult]) {
         if (result.error) {
           throw result.error
         }
@@ -641,7 +592,72 @@ export function createAttendanceRepository(): AttendanceRepository {
 
       const profile = profileResult.data as ProfileRow | null
       const organization = firstRelation(profile?.organizations ?? null)
-      const attendanceEmployees = ((employeesResult.data ?? []) as EmployeeRow[]).map(toAttendanceEmployee)
+      const currentUserRoles = ((rolesResult.data ?? []) as RoleRow[]).map((row) => row.role)
+      const canViewCompensation = hasAnyRole(currentUserRoles, ['owner', 'admin', 'hr', 'finance'])
+      const serviceClient = getSupabaseServiceClient()
+
+      if (!profile?.organization_id || !serviceClient) {
+        throw new Error('Supabase service role is required to load protected attendance data')
+      }
+
+      const [employeesResult, entriesResult, holidaysResult, locksResult, leavesResult] = await Promise.all([
+        serviceClient
+          .from('employees')
+          .select('id, organization_id, employee_code, full_name, annual_compensation, profile_id, manager_profile_id')
+          .eq('organization_id', profile.organization_id)
+          .order('employee_code', { ascending: true }),
+        db
+          .from('attendance_entries')
+          .select(
+            `
+              attendance_status,
+              employee_id,
+              id,
+              notes,
+              overtime_hours,
+              payable_hours,
+              work_date,
+              employees(employee_code, full_name)
+            `,
+          )
+          .gte('work_date', period.startDate)
+          .lte('work_date', period.endDate)
+          .order('work_date', { ascending: true }),
+        supabase
+          .from('holidays')
+          .select('holiday_date, id, name, region')
+          .gte('holiday_date', period.startDate)
+          .lte('holiday_date', period.endDate)
+          .order('holiday_date', { ascending: true }),
+        db
+          .from('attendance_month_locks')
+          .select('id, locked_at, locked_by, notes, period_month')
+          .eq('period_month', period.month),
+        supabase
+          .from('leave_requests')
+          .select('employee_id, end_date, leave_type, start_date')
+          .eq('status', 'approved')
+          .lte('start_date', period.endDate)
+          .gte('end_date', period.startDate),
+      ])
+
+      for (const result of [employeesResult, entriesResult, holidaysResult, locksResult, leavesResult]) {
+        if (result.error) {
+          throw result.error
+        }
+      }
+
+      const attendanceEmployees = ((employeesResult.data ?? []) as EmployeeRow[])
+        .filter(
+          (employee) =>
+            canViewCompensation ||
+            employee.profile_id === profile.id ||
+            employee.manager_profile_id === profile.id,
+        )
+        .map(toAttendanceEmployee)
+      const visibleAttendanceEmployees = canViewCompensation
+        ? attendanceEmployees
+        : attendanceEmployees.map((employee) => ({ ...employee, annualCompensation: 0 }))
       const entries = ((entriesResult.data ?? []) as AttendanceEntryRow[]).map(toAttendanceEntry)
       const holidays = ((holidaysResult.data ?? []) as HolidayRow[]).map(toHoliday)
       const locks = ((locksResult.data ?? []) as AttendanceMonthLockRow[]).map(toAttendanceMonthLock)
@@ -649,8 +665,8 @@ export function createAttendanceRepository(): AttendanceRepository {
 
       return {
         data: {
-          currentUserRoles: ((rolesResult.data ?? []) as RoleRow[]).map((row) => row.role),
-          employees: attendanceEmployees,
+          currentUserRoles,
+          employees: visibleAttendanceEmployees,
           entries,
           holidays,
           locks,
@@ -661,7 +677,7 @@ export function createAttendanceRepository(): AttendanceRepository {
               }
             : null,
           period,
-          summaries: buildAttendanceSummaries(attendanceEmployees, entries, holidays, approvedLeaves, period),
+          summaries: buildAttendanceSummaries(visibleAttendanceEmployees, entries, holidays, approvedLeaves, period),
         },
         source: 'supabase',
       }

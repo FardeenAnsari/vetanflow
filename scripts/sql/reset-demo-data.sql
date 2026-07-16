@@ -1,5 +1,18 @@
 begin;
 
+do $$
+begin
+  if not exists (
+    select 1
+    from public.organizations
+    where id = '00000000-0000-0000-0000-000000000001'
+      and name = 'VetanFlow Labs'
+  ) then
+    raise exception 'Refusing to reset: expected the VetanFlow Labs showcase organization';
+  end if;
+end
+$$;
+
 alter table public.payroll_runs disable trigger payroll_runs_prevent_finalized_changes;
 alter table public.payroll_run_lines disable trigger payroll_run_lines_prevent_finalized_changes;
 alter table public.payroll_adjustments disable trigger payroll_adjustments_prevent_finalized_changes;
@@ -52,7 +65,7 @@ update public.employees
 set status = 'active',
     updated_at = now()
 where organization_id = '00000000-0000-0000-0000-000000000001'
-  and employee_code in ('IND-001', 'IND-002', 'IND-003');
+  and employee_code in ('VF-001', 'VF-002', 'VF-003', 'VF-004', 'VF-005', 'VF-006', 'VF-007');
 
 alter table public.holidays enable trigger holidays_prevent_locked_changes;
 alter table public.attendance_entries enable trigger attendance_entries_prevent_locked_changes;

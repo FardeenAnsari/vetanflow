@@ -31,6 +31,11 @@ function normalizePeriodMonth(value: string) {
   return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-01`
 }
 
+function getDefaultDemoPeriodMonth() {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 10)
+}
+
 function getMonthBounds(month: string) {
   const start = new Date(`${month}T00:00:00.000Z`)
   const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0))
@@ -81,7 +86,9 @@ if (!supabase) {
 }
 
 const db = supabase as any
-const period = getMonthBounds(normalizePeriodMonth(process.env.DEMO_PERIOD_MONTH ?? '2026-09-01'))
+const period = getMonthBounds(
+  normalizePeriodMonth(process.env.DEMO_PERIOD_MONTH ?? getDefaultDemoPeriodMonth()),
+)
 
 const buckets = await query('storage buckets', supabase.storage.listBuckets())
 const bucketIds = new Set((buckets ?? []).map((bucket) => bucket.id))
@@ -121,10 +128,10 @@ const employees = await query(
   supabase
     .from('employees')
     .select(
-      'id,annual_ctc,bank_account_holder_name,bank_account_number,bank_ifsc,bank_name,department_id,designation,employee_code,full_name,organization_id,status,work_email',
+      'id,annual_compensation,bank_account_holder_name,bank_account_number,bank_routing_code,bank_name,department_id,designation,employee_code,full_name,organization_id,status,work_email',
     )
     .eq('organization_id', organizationId)
-    .eq('status', 'active')
+    .in('status', ['active', 'on_leave', 'exit_pending'])
     .order('employee_code', { ascending: true }),
 )
 
@@ -138,7 +145,7 @@ for (const [index, employee] of employees.entries()) {
   const isBankReady =
     hasValue(employee.bank_account_holder_name) &&
     hasValue(employee.bank_account_number) &&
-    hasValue(employee.bank_ifsc) &&
+    hasValue(employee.bank_routing_code) &&
     hasValue(employee.bank_name)
 
   if (isBankReady) {
@@ -150,8 +157,8 @@ for (const [index, employee] of employees.entries()) {
     .update({
       bank_account_holder_name: employee.bank_account_holder_name ?? employee.full_name,
       bank_account_number: employee.bank_account_number ?? `9000000000${String(index + 1).padStart(4, '0')}`,
-      bank_ifsc: employee.bank_ifsc ?? `HDFC0${String(1000 + index).padStart(6, '0')}`,
-      bank_name: employee.bank_name ?? 'HDFC Demo Bank',
+      bank_routing_code: employee.bank_routing_code ?? String(21_000_021 + index).padStart(9, '0'),
+      bank_name: employee.bank_name ?? 'VetanFlow Demo Bank',
     })
     .eq('id', employee.id)
 
@@ -270,6 +277,7 @@ const existingRun = await query(
 let runId = existingRun?.id as string | undefined
 let runCreated = false
 let linesCreated = 0
+let adjustmentsCreated = 0
 
 if (!runId) {
   const createdRun = await query(
@@ -303,7 +311,62 @@ if (!runId) {
   if (deleteLines.error) {
     throw deleteLines.error
   }
+
+  const deleteAdjustments = await supabase.from('payroll_adjustments').delete().eq('payroll_run_id', runId)
+
+  if (deleteAdjustments.error) {
+    throw deleteAdjustments.error
+  }
 }
+
+const seededAdjustments = existingRun?.status === 'finalized'
+  ? []
+  : await query(
+      'payroll_adjustments insert',
+      db
+        .from('payroll_adjustments')
+        .insert([
+          {
+            amount: 250 + new Date(`${period.startDate}T00:00:00.000Z`).getUTCMonth() * 10,
+            component_code: 'TRAVEL_REIMBURSEMENT',
+            component_name: 'Travel reimbursement',
+            component_type: 'reimbursement',
+            created_by: makerRole.user_id,
+            employee_id: employees[1]?.id ?? employees[0].id,
+            notes: 'Approved business travel expense',
+            organization_id: organizationId,
+            payroll_run_id: runId,
+            tax_treatment: 'non_taxable_reimbursement',
+          },
+          {
+            amount: 550 + new Date(`${period.startDate}T00:00:00.000Z`).getUTCMonth() * 25,
+            component_code: 'PERFORMANCE_BONUS',
+            component_name: 'Performance bonus',
+            component_type: 'earning',
+            created_by: makerRole.user_id,
+            employee_id: employees[2]?.id ?? employees[0].id,
+            notes: 'Monthly performance recognition',
+            organization_id: organizationId,
+            payroll_run_id: runId,
+            tax_treatment: 'taxable',
+          },
+          {
+            amount: 125,
+            component_code: 'EQUIPMENT_RECOVERY',
+            component_name: 'Equipment recovery',
+            component_type: 'deduction',
+            created_by: makerRole.user_id,
+            employee_id: employees[3]?.id ?? employees[0].id,
+            notes: 'Agreed post-tax equipment repayment',
+            organization_id: organizationId,
+            payroll_run_id: runId,
+            tax_treatment: 'post_tax_deduction',
+          },
+        ])
+        .select('id,amount,component_code,component_name,component_type,created_at,created_by,employee_id,notes,payroll_run_id,tax_treatment,updated_at'),
+    )
+
+adjustmentsCreated = seededAdjustments.length
 
 const existingLines = await query(
   'payroll_run_lines lookup',
@@ -317,26 +380,52 @@ if (!existingLines?.length) {
 
   const lineInserts = employees.map((employee, index) => {
     const lossOfPayDays = index === 0 ? 0.5 : 0
-    const reimbursementAmount = index === 1 ? 1500 : 0
     const overtimeAmount = index === 2 ? 1200 : 0
+    const employeeAdjustments = seededAdjustments.filter((adjustment: any) => adjustment.employee_id === employee.id)
+    const reimbursementAmount = employeeAdjustments
+      .filter((adjustment: any) => adjustment.component_type === 'reimbursement')
+      .reduce((total: number, adjustment: any) => total + Number(adjustment.amount), 0)
+    const taxableEarningsAmount = employeeAdjustments
+      .filter((adjustment: any) => adjustment.component_type === 'earning')
+      .reduce((total: number, adjustment: any) => total + Number(adjustment.amount), 0)
+    const postTaxDeductionAmount = employeeAdjustments
+      .filter((adjustment: any) => adjustment.tax_treatment === 'post_tax_deduction')
+      .reduce((total: number, adjustment: any) => total + Number(adjustment.amount), 0)
+    const adjustmentNetImpact = reimbursementAmount + taxableEarningsAmount - postTaxDeductionAmount
     const payroll = calculatePayrollPreview({
-      annualCtc: Number(employee.annual_ctc),
+      annualCompensation: Number(employee.annual_compensation),
       employeeId: employee.id,
       overtimeAmount,
+      postTaxDeductionAmount,
       payableDays: period.calendarDays,
       reimbursementAmount,
+      taxableEarningsAmount,
       unpaidLeaveDays: lossOfPayDays,
     })
+    const adjustmentItems = employeeAdjustments.map((adjustment: any) => ({
+      amount: Number(adjustment.amount),
+      componentCode: adjustment.component_code,
+      componentName: adjustment.component_name,
+      componentType: adjustment.component_type,
+      createdAt: adjustment.created_at,
+      createdBy: adjustment.created_by,
+      employeeId: adjustment.employee_id,
+      id: adjustment.id,
+      notes: adjustment.notes,
+      payrollRunId: adjustment.payroll_run_id,
+      taxTreatment: adjustment.tax_treatment,
+      updatedAt: adjustment.updated_at,
+    }))
     const snapshot = {
       adjustments: {
-        items: [],
-        netImpact: reimbursementAmount,
+        items: adjustmentItems,
+        netImpact: adjustmentNetImpact,
         totals: {
-          deductions: 0,
+          deductions: postTaxDeductionAmount,
           preTaxDeductions: 0,
-          postTaxDeductions: 0,
+          postTaxDeductions: postTaxDeductionAmount,
           reimbursements: reimbursementAmount,
-          taxableEarnings: 0,
+          taxableEarnings: taxableEarningsAmount,
         },
       },
       attendance: {
@@ -449,4 +538,5 @@ console.log(`Attendance entries prepared: ${attendanceEntriesCreated}`)
 console.log(`Bank detail updates: ${bankUpdates}`)
 console.log(`Payroll run: ${runCreated ? 'created' : 'already present'}`)
 console.log(`Payroll lines created: ${linesCreated}`)
+console.log(`Payroll adjustments created: ${adjustmentsCreated}`)
 console.log(`Payslips generated: ${payslipResult.data.length}`)

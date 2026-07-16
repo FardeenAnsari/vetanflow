@@ -8,7 +8,7 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace frontend",
+    "dev": "concurrently --kill-others --names api,web --prefix-colors blue,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "npm run dev --workspace backend",
     "build": "npm run build --workspace frontend && npm run build --workspace backend",
@@ -20,8 +20,11 @@
     "deploy:check": "node scripts/check-deploy-readiness.mjs",
     "handoff:update": "node scripts/update-handoff.mjs",
     "demo:check": "node scripts/check-demo-readiness.mjs",
+    "demo:check-logins": "tsx scripts/check-demo-logins.ts",
+    "demo:seed-showcase": "tsx scripts/seed-showcase-data.ts",
+    "demo:bootstrap": "node scripts/bootstrap-showcase.mjs",
     "demo:prepare": "tsx scripts/prepare-demo-data.ts",
-    "demo:reset": "npx supabase db query --linked --file scripts/sql/reset-demo-data.sql && npm run demo:prepare",
+    "demo:reset": "tsx scripts/clean-showcase-storage.ts && npx supabase db query --linked --file scripts/sql/reset-demo-data.sql && npm run demo:bootstrap",
     "screenshots:open-profiles": "node scripts/open-demo-profiles.mjs",
     "screenshots:capture": "node scripts/capture-demo-screenshots.mjs",
     "screenshots:capture-authenticated": "node scripts/capture-authenticated-demo-screenshots.mjs",
@@ -37,6 +40,7 @@
     "node": ">=22"
   },
   "devDependencies": {
+    "concurrently": "^9.2.4",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "supabase": "^2.109.0"

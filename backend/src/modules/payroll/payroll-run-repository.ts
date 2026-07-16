@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { env } from '../../config/env.js'
 import { createSupabaseUserClient, getSupabaseServiceClient } from '../../lib/supabase.js'
 import { postgresUuidSchema } from '../../lib/validation.js'
 import {
@@ -213,7 +214,7 @@ type PreviousPayrollRunRow = {
 }
 
 type PayrollEmployeeRow = {
-  annual_ctc: number
+  annual_compensation: number
   employee_code: string
   full_name: string
   id: string
@@ -353,7 +354,7 @@ function getFallbackDashboard(): PayrollDashboard {
     currentUserRoles: ['owner'],
     organization: {
       id: '00000000-0000-0000-0000-000000000001',
-      name: 'VetanFlow Demo India',
+      name: 'VetanFlow Labs',
     },
     runs: [],
   }
@@ -489,7 +490,7 @@ function ensureDifferentPayrollChecker(
 
 function toAttendanceEmployee(row: PayrollEmployeeRow): AttendanceEmployee {
   return {
-    annualCtc: row.annual_ctc,
+    annualCompensation: row.annual_compensation,
     code: row.employee_code,
     fullName: row.full_name,
     id: row.id,
@@ -659,7 +660,7 @@ function buildVarianceWarnings(currentNetPay: number, previousNetPay: number | u
       currentNetPay,
       delta,
       deltaPercent,
-      message: `Net pay ${direction} by INR ${amount.toFixed(2)} from the previous approved run`,
+      message: `Net pay ${direction} by ${env.payroll.currencyCode} ${amount.toFixed(2)} from the previous approved run`,
       previousNetPay,
       severity: absolutePercent >= 20 || Math.abs(delta) >= 20000 ? 'high' : 'medium',
     },
@@ -808,9 +809,9 @@ async function loadAttendanceInputs(supabase: ServiceClient, organizationId: str
       .maybeSingle(),
     supabase
       .from('employees')
-      .select('id, organization_id, employee_code, full_name, annual_ctc')
+      .select('id, organization_id, employee_code, full_name, annual_compensation')
       .eq('organization_id', organizationId)
-      .eq('status', 'active')
+      .in('status', ['active', 'on_leave', 'exit_pending'])
       .order('employee_code', { ascending: true }),
     db
       .from('attendance_entries')
@@ -882,7 +883,7 @@ function buildLineInsert(
     const adjustmentTotals = summarizeAdjustments(adjustments)
     const overtimeAmount = calculateOvertimeAmount(summary)
     const payrollPreview = calculatePayrollPreview({
-      annualCtc: summary.grossMonthly * 12,
+      annualCompensation: summary.grossMonthly * 12,
       employeeId: summary.employeeId,
       overtimeAmount,
       payableDays: summary.calendarDays,

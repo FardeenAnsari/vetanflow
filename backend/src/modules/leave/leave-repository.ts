@@ -148,7 +148,7 @@ function getFallbackDashboard(): LeaveDashboard {
     employees: [],
     organization: {
       id: '00000000-0000-0000-0000-000000000001',
-      name: 'VetanFlow Demo India',
+      name: 'VetanFlow Labs',
     },
     requests: [],
   }

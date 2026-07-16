@@ -16,3 +16,15 @@ declare global {
 
 export const adminAssignableRoles = ['admin', 'hr', 'finance', 'manager', 'employee'] as const
 export const invitationActorRoles: AppRole[] = ['owner', 'admin', 'hr']
+
+export function canAssignRole(actorRoles: AppRole[], targetRole: (typeof adminAssignableRoles)[number]) {
+  if (actorRoles.includes('owner')) {
+    return true
+  }
+
+  if (actorRoles.includes('admin')) {
+    return targetRole !== 'admin'
+  }
+
+  return actorRoles.includes('hr') && (targetRole === 'manager' || targetRole === 'employee')
+}

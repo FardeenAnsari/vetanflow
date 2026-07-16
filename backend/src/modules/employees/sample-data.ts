@@ -5,7 +5,7 @@ export type Employee = {
   department: string
   role: string
   location: string
-  annualCtc: number
+  annualCompensation: number
   status: 'draft' | 'active' | 'on_leave' | 'exit_pending' | 'inactive'
 }
 
@@ -14,32 +14,32 @@ export type AppRole = 'owner' | 'admin' | 'hr' | 'finance' | 'manager' | 'employ
 export const employees: Employee[] = [
   {
     id: 'emp_001',
-    code: 'IND-001',
+    code: 'VF-001',
     fullName: 'Aarav Mehta',
     department: 'Engineering',
     role: 'Frontend Engineer',
-    location: 'Kolkata',
-    annualCtc: 1200000,
+    location: 'New York',
+    annualCompensation: 120000,
     status: 'active',
   },
   {
     id: 'emp_002',
-    code: 'IND-002',
+    code: 'VF-002',
     fullName: 'Naina Kapoor',
     department: 'Finance',
     role: 'Payroll Specialist',
-    location: 'Mumbai',
-    annualCtc: 900000,
+    location: 'Austin',
+    annualCompensation: 90000,
     status: 'active',
   },
   {
     id: 'emp_003',
-    code: 'IND-003',
+    code: 'VF-003',
     fullName: 'Ritwik Sen',
     department: 'Operations',
     role: 'Operations Manager',
-    location: 'Bengaluru',
-    annualCtc: 1500000,
+    location: 'Seattle',
+    annualCompensation: 150000,
     status: 'draft',
   },
 ]

@@ -1,84 +1,102 @@
 # Automation
 
-Automation exists to keep the project easy to maintain and easy to explain.
+VetanFlow automation keeps local development, the live Supabase showcase, documentation, and delivery reproducible.
 
-## Main Commands
+## Command Map
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | start Express and Vite together |
+| `npm run verify` | lint, typecheck, 62 backend tests, frontend build, backend build |
+| `npm run deploy:check` | validate deployment files, scripts, and environment examples |
+| `npm run demo:seed-showcase` | create/update 12 Auth accounts and operational foundation |
+| `npm run demo:prepare` | prepare one payroll month, previous month by default |
+| `npm run demo:bootstrap` | seed six historical months, then run readiness and role checks |
+| `npm run demo:check` | run 15 live showcase readiness assertions |
+| `npm run demo:check-logins` | verify all 12 accounts, data scopes, and ID-card authorization |
+| `npm run demo:reset` | destructively rebuild only the protected showcase organization |
+| `npm run screenshots:capture` | capture public/sign-in screenshots |
+| `npm run screenshots:capture-authenticated` | capture owner and employee workspaces |
+| `npm run supabase:push` | apply pending migrations to the linked project |
+| `npm run supabase:types` | regenerate backend TypeScript database types |
+| `npm run handoff:update` | refresh the generated Handoff snapshot |
+| `npm run graphify:update` | refresh the phase-level knowledge graph |
+
+## Verification Gate
+
+`npm run verify` executes, in order:
+
+1. frontend Oxlint
+2. backend TypeScript lint check
+3. frontend strict typecheck
+4. backend strict typecheck
+5. Vitest backend suite
+6. Vite production build
+7. backend TypeScript production build
+
+Run `npm run deploy:check` after deployment configuration changes. Run `npm audit --audit-level=moderate` and Supabase database lint at security or release milestones.
+
+## Showcase Provisioning
+
+`scripts/bootstrap-showcase.mjs` is the main idempotent showcase orchestrator:
+
+1. `demo:seed-showcase` creates or updates the 12 accounts and ten-employee foundation.
+2. It invokes `demo:prepare` for calendar offsets `-6` through `-1`.
+3. Each month gets attendance, a lock, adjustments, finalized payroll lines, and payslips.
+4. `demo:check` validates required live data.
+5. `demo:check-logins` signs in every account and validates role visibility.
+
+Use `DEMO_PERIOD_MONTH=YYYY-MM-01 npm run demo:prepare` to prepare a specific month.
+
+Credentials are written only to ignored `.tmp/demo-credentials.json` with local owner-only permissions. The script reuses one password per role and never writes passwords to tracked documentation.
+
+## Reset Safety
+
+`npm run demo:reset` is intentionally destructive. It:
+
+1. verifies the fixed showcase organization identity
+2. removes that organization's private payslip objects
+3. runs the linked-project cleanup SQL
+4. rebuilds the complete six-month showcase
+
+Use `demo:bootstrap` for ordinary repair. Use `demo:reset` only when deleting showcase transactional history is intended. Never point it at an unrelated or shared production organization.
+
+## GitHub Actions And Hooks
+
+`.github/workflows/ci.yml` runs `npm ci` and `npm run verify` on pushes to `main` and pull requests. It uses read-only contents permission, cancels superseded branch runs, and runs on Node 24.
+
+The Husky pre-commit hook refreshes the Handoff snapshot and runs lint-staged. The project-level verification remains intentionally strict because payroll, authorization, and generated documents share cross-module contracts.
+
+## Supabase Workflow
+
+Database changes are migration-first:
+
+1. add SQL to `supabase/migrations/`
+2. review grants, RLS, indexes, triggers, and rollback implications
+3. run `npm run supabase:push`
+4. run `npm run supabase:types`
+5. run Supabase database lint
+6. run `npm run verify`
+7. run relevant live role/data checks
+
+Do not edit the cloud schema manually and then leave the repository behind.
+
+## Documentation Closeout
+
+Small feature slices require focused tests but no documentation regeneration. At a full phase close, or when explicitly requested:
 
 ```sh
-npm run verify
-npm run handoff:update
-npm run graphify:install
-npm run graphify:extract
-npm run graphify:update
-npm run supabase:link
-npm run supabase:push
-npm run supabase:types
-```
-
-## Verification
-
-`npm run verify` runs:
-
-1. frontend lint
-2. backend typecheck-as-lint
-3. frontend typecheck
-4. backend typecheck
-5. backend tests
-6. frontend production build
-7. backend production build
-
-## GitHub Actions
-
-`.github/workflows/ci.yml` runs `npm ci` and `npm run verify` on pushes to `main` and pull requests. CI uses a read-only contents permission, cancels older duplicate branch runs, and runs on Node 24, which satisfies the project engine requirement of Node 22 or newer.
-
-## Local Git Hooks
-
-Husky is installed as a dev dependency. The pre-commit hook:
-
-1. runs `npm run handoff:update`
-2. stages the updated `docs/HANDOFF.md`
-3. runs lint-staged
-
-lint-staged currently runs the full verification command for staged project files. This is intentionally strict while the project is young.
-
-## Handoff Automation
-
-`scripts/update-handoff.mjs` refreshes the generated snapshot in `docs/HANDOFF.md` with:
-
-- update timestamp
-- current branch
-- working tree state
-- available npm scripts
-- core run URLs
-
-Manual sections of the handoff still need human updates for decisions, changed behavior, and next steps.
-
-## Supabase Automation
-
-Supabase work should stay migration-first:
-
-1. edit SQL in `supabase/migrations`
-2. review the migration before pushing
-3. link/push to the cloud Supabase project when ready
-4. generate types with `npm run supabase:types`
-5. update `docs/HANDOFF.md`
-
-Available scripts:
-
-- `npm run supabase:link`: links this repo to a cloud Supabase project.
-- `npm run supabase:push`: applies migrations to the linked cloud project.
-- `npm run supabase:types`: generates TypeScript database types from the linked cloud project into `backend/src/lib/database.types.ts`.
-
-This project uses the Supabase cloud project or Supabase MCP tools for database verification.
-
-See `docs/SUPABASE_CLOUD_SETUP.md` for the exact cloud setup steps.
-
-## Phase Close-Out Rule
-
-During small feature slices, verify the code but do not refresh `docs/HANDOFF.md`, `docs/PHASES.md`, or Graphify unless explicitly requested. At full phase completion, update the phase tracker and handoff, then run:
-
-```sh
 npm run handoff:update
 npm run graphify:update
 npm run verify
 ```
+
+Then update:
+
+- `README.md`
+- `docs/PHASES.md`
+- `docs/HANDOFF.md`
+- `docs/AI_TAKEOVER.md`
+- any domain guide changed by the phase
+
+Commit generated Graphify output only after the graph update completes successfully.

@@ -1,6 +1,6 @@
 # Phase Tracker
 
-This file is the source of truth for project progress. Keep one phase active at a time and update it after each meaningful development slice.
+This file is the source of truth for project progress. Keep one phase active at a time and update it when a complete phase closes.
 
 ## Phase 0 — Foundation
 
@@ -40,7 +40,7 @@ Progress:
 - Local backend/frontend env files added and masked key checks passed.
 - Backend smoke test confirms unauthenticated employee access returns 401.
 - Demo owner Auth user created and linked to `profiles` + `user_roles`.
-- Demo employee Auth user created, linked to `profiles` + `user_roles`, and connected to seeded employee `IND-001`.
+- Demo employee Auth user created, linked to `profiles` + `user_roles`, and connected to seeded employee `VF-001`.
 - Owner RLS verified: direct Supabase and backend API show all three seeded employees.
 - Employee RLS verified: direct Supabase and backend API show only the linked employee row.
 - Server-side employee create verified through the backend with owner token, then the temporary row was deleted.
@@ -65,7 +65,7 @@ Goal: Build the employee, department, location, and salary setup workflows.
 
 Progress:
 - Added `work_locations` and `salary_revisions` tables with RLS.
-- Added service-role-only `record_salary_revision` database function for atomic salary revision + employee CTC update + audit log.
+- Added service-role-only `record_compensation_revision` database function for atomic compensation revision + employee pay update + audit log.
 - Added advisor-driven index for `salary_revisions.created_by`.
 - Seeded three work locations and three initial salary revisions.
 - Added generated Supabase types for the new schema.
@@ -122,7 +122,7 @@ Progress:
 - Added attendance status metadata, notes, recorded actor tracking, and updated timestamps to attendance entries.
 - Added `attendance_month_locks` for payroll-period attendance locking.
 - Added database trigger protection so locked attendance months block attendance and holiday edits.
-- Added India-first fixed holiday seed data for Republic Day, Independence Day, and Gandhi Jayanti.
+- Added organization holiday records and payroll-period holiday handling.
 - Added manager-aware attendance RLS so employees see self, direct managers see reports, and payroll/HR roles see organization data.
 - Added `/api/attendance/dashboard`, attendance entry upsert, holiday upsert, month lock, and month unlock endpoints.
 - Added server-side attendance summary calculation across entries, holidays, approved leave, half-day loss of pay, and payroll preview impact.
@@ -164,7 +164,7 @@ Progress:
 - Verified the Payroll runs approval controls in Chrome with live Supabase auth.
 - Verified the full repo with `npm run verify`.
 - Added `payroll_adjustments` for run-level employee earnings, deductions, and reimbursements with RLS, explicit Data API grants, audit-friendly metadata, and finalized-run trigger protection.
-- Extended payroll calculation snapshots with overtime amount, taxable adjustments, reimbursements, pre/post-tax deductions, ESI, PT, and TDS-ready fields.
+- Extended payroll calculation snapshots with overtime, taxable adjustments, reimbursements, pre/post-tax deductions, and explicit configurable deduction fields.
 - Added `/api/payroll/runs/:id/adjustments` create/delete actions that regenerate draft/reviewing run lines immediately.
 - Added automatic overtime pay from locked attendance hours.
 - Added previous-run net-pay variance warnings to line snapshots.
@@ -180,14 +180,14 @@ Progress:
 - Verified the full repo with `npm run verify`.
 
 Tasks:
-- Completed: earnings, deductions, reimbursements, automatic overtime amount, ESI, PT, and TDS-ready structure.
+- Completed: earnings, deductions, reimbursements, automatic overtime amount, and configurable deduction structure.
 - Completed: variance warnings.
 - Completed: maker-checker separation between payroll creator/submitter and approver/finalizer.
 
 Definition of done:
 - Finalized runs are immutable.
 - Payroll lines keep calculation snapshots.
-- Tests cover core India payroll scenarios.
+- Tests cover core payroll, adjustment, deduction, and loss-of-pay scenarios.
 - Maker and checker duties are separated for approval and finalization.
 
 ## Phase 5 — Payslips, Reports, And Exports
@@ -201,14 +201,14 @@ Progress:
 - Added finalized-run payslip generation with PDF rendering, storage upload, payslip records, and audit logs.
 - Added signed payslip download endpoint protected by user-scoped RLS checks before the service role creates a URL.
 - Added employee self-service payslip archive with period, gross/deduction/net pay, status, and download action.
-- Added employee bank account fields with India IFSC/account-number validation.
+- Added employee payment account fields with routing-code and account-identifier validation.
 - Added HR-maintained bank detail form fields and masked bank-readiness display.
-- Added finalized payroll CSV exports for bank payout, statutory summary, and department cost reports.
-- Added Payroll runs export controls for Bank CSV, Statutory CSV, and Cost CSV.
+- Added finalized payroll CSV exports for bank payout, deductions summary, and department cost reports.
+- Added Payroll runs export controls for Bank CSV, Deductions CSV, and Cost CSV.
 - Added focused backend tests for payslip PDFs and payroll CSV export builders.
 - Pushed Phase 5 migrations to Supabase Cloud and regenerated Supabase database types.
 - Verified live Supabase Phase 5 schema access for employee bank columns and payslip table access.
-- Verified live temporary payroll export smoke for bank payout, statutory summary, and department cost CSVs with cleanup.
+- Verified live temporary payroll export smoke for bank payout, deductions summary, and department cost CSVs with cleanup.
 - Verified live temporary payslip generation, signed download, PDF fetch, and cleanup.
 - Verified the full repo with `npm run verify`.
 
@@ -216,7 +216,7 @@ Tasks:
 - Completed: Payslip PDF generation.
 - Completed: Employee payslip portal.
 - Completed: Bank payout export.
-- Completed: PF/ESI/PT/TDS-ready report exports.
+- Completed: retirement, insurance, local tax, and withholding report exports.
 - Completed: Payroll cost reports by department.
 
 Definition of done:
@@ -248,3 +248,106 @@ Tasks:
 
 Definition of done:
 - A reviewer can run the local demo, inspect the repo, and understand the architecture in under 10 minutes.
+
+## Phase 7 — Productization, Global Defaults, And Role UX
+
+Status: Complete
+
+Goal: Turn the shared dashboard into a role-specific, commercially credible payroll operations product foundation.
+
+Progress:
+- Replaced the single long admin workspace with hash-routed sections and responsive desktop/mobile navigation.
+- Added distinct owner, administrator, people operations, finance, manager, and employee workspace priorities.
+- Limited manager navigation to leave and attendance; limited finance navigation to payment profiles, payroll, and audit.
+- Added an operational overview with cycle readiness, action queues, role-specific metrics, and semantic success/warning/error indicators.
+- Added accessible status badges, focus states, skip navigation, stable responsive controls, and reduced-motion support.
+- Added access management with organization member listing, secure invitations, and a role hierarchy that prevents privilege escalation.
+- Added editable organization name, country, currency, locale, and timezone preferences.
+- Replaced regional demo locations, employee codes, holidays, labels, exports, and generated payslip copy with neutral defaults.
+- Replaced hardcoded regional deductions with explicit retirement, insurance, local tax, and withholding inputs that default to zero.
+- Removed unused regional organization identifier columns from the live Supabase schema.
+- Restricted direct authenticated Data API access to employee compensation and payment columns; sensitive reads now require backend tenant and role checks.
+- Renamed compensation and payout routing fields across the API and live database, and normalized historical payroll snapshots to the global deduction model.
+- Split React, Supabase, Motion, and icon dependencies into cacheable production chunks and enabled dependency license output.
+- Added a development-only fixture role preview for repeatable owner, finance, manager, and employee visual QA without cloud account changes.
+- Verified desktop and mobile role surfaces in the browser with no horizontal overflow, unnamed controls, unlabeled inputs, missing image alt text, or console errors.
+- Pushed all Phase 7 migrations to Supabase Cloud, regenerated types, and passed Supabase database lint.
+
+Definition of done:
+- Every role sees only the navigation and actions needed for its work.
+- Regional assumptions are configuration, not hardcoded presentation or silent calculation rules.
+- Sensitive compensation and payment fields are protected below the UI layer.
+- Production build, tests, lint, typecheck, database lint, and browser checks pass.
+
+## Phase 8 — Public Product Experience And Complete Showcase
+
+Status: Complete
+
+Goal: Make VetanFlow understandable from the public entry point, fill every major workflow with credible data, and automate a repeatable employee-to-payslip demonstration.
+
+Progress:
+- Added a public landing page with real workspace imagery, product capabilities, role boundaries, and trust signals.
+- Added a pausable seven-stage animated product tour with reduced-motion support.
+- Added How It Works, journal index/article, Terms, Privacy, and free-evaluation/open-source license pages.
+- Kept the authenticated product at `/app`, moved sign-in/account switching to `/login`, and added Vercel SPA rewrites for every public route.
+- Rebuilt the README with a fresh animated hero and a complete account-to-payslip study flow.
+- Added an idempotent ten-employee Supabase master seed with departments, locations, reporting lines, payout readiness, compensation history, leave states, attendance states, and audit events.
+- Provisioned 12 live showcase accounts: one owner, two admins, two HR users, two finance users, two managers, and three employees; owner remains the highest organization role.
+- Added an ignored owner-only credential file and all-role login/visibility verification.
+- Added a complete showcase bootstrap that seeds Auth/data, prepares six historical payroll months, generates payslips, and runs readiness/login checks.
+- Reworked destructive reset to remove private payslip objects, verify the showcase organization, clear transactional data, and run the full bootstrap.
+- Removed the stale future-dated payroll run and replaced it with moving calendar-relative finalized payroll cycles.
+- Made authenticated screenshot automation read-only so it cannot rotate passwords or reassign roles.
+- Added API and invitation rate limiting, explicit JSON body limits, production Supabase fail-fast validation, and strict production CORS validation.
+- Added missing foreign-key indexes identified by Supabase advisors and pushed the migration to the cloud project.
+- Verified all public routes and the owner workspace on desktop/mobile with no horizontal overflow or unnamed controls.
+- Passed 58 backend tests, frontend/backend lint and typechecks, production builds, deployment preflight, npm audit with zero advisories, Supabase database lint, 15/15 demo readiness checks, and the initial 6/6 role login checks.
+
+Known external setting:
+- Enable Supabase Auth leaked-password protection in the project dashboard before a public production launch.
+
+Definition of done:
+- A new viewer can understand the product from the landing page and animated journey.
+- Every current role can sign in and sees a materially different, correctly scoped workspace.
+- The live showcase covers employee setup through finalized payroll and private payslip delivery.
+- Fresh seed, bootstrap, reset, screenshots, checks, README, and phase handoff are aligned.
+
+## Phase 9 — Authority, Operational Depth, And Documentation Closeout
+
+Status: Complete
+
+Goal: close the remaining role-routing, owner-authority, data-depth, configuration, security, branding, and project-transfer gaps.
+
+Progress:
+- Added `/login` as an explicit account boundary with current-session disclosure, Continue, Use another account, and local-scope sign-out.
+- Fixed the persisted owner-session behavior that redirected attempted employee logins into the owner workspace.
+- Added owner/admin/HR/finance employee-directory ID PDF actions and retained employee self-only access.
+- Added backend two-sided employee ID PDF generation with organization-aware date formatting.
+- Added a reduced-motion-aware ID-card production sequence with secure queue, printing, ribbon attachment, and completion feedback.
+- Added a complete VetanFlow brand pack with static, inverse, wordmark, animated SVG, and transparent PNG assets.
+- Replaced organization country, currency, locale, and timezone text fields with validated selections and country defaults.
+- Connected organization preferences to currency, document date, local-time, and reporting-cutoff previews.
+- Expanded the live showcase to 12 Auth accounts while preserving one shared password per role and a user-supplied owner password.
+- Expanded the payroll history to six finalized calendar-relative months with 216 attendance entries, 18 adjustments, 54 payroll lines, and 54 payslips.
+- Added one-command frontend/API development with `npm run dev`.
+- Added a Vercel Express function adapter and same-origin `/api` production routing while retaining the Render service option.
+- Added optional frontend and backend Sentry initialization, tracing configuration, error boundaries, and Express error handling.
+- Added organization validation regression coverage and employee ID PDF tests.
+- Hardened Data API grants so anonymous users have no public-table privileges and authenticated roles keep only intended reads.
+- Verified owner access to multiple employee IDs, employee self-card `200`, and employee cross-record card `404`.
+- Passed 7 test files and 62 tests, lint, typecheck, production builds, deployment preflight, npm audit, Supabase database lint, 15/15 readiness checks, and 12/12 live role checks.
+- Refreshed the complete documentation set and added `docs/AI_TAKEOVER.md` as the authoritative model/engineer resume guide.
+
+Known external work:
+- Hosted staging/production deployment is not yet complete.
+- Sentry requires deployment DSNs and alert routing before events are sent.
+- Supabase leaked-password protection must be enabled in the Auth dashboard.
+- Real use requires monitored email, backups, legal review, and independent security testing.
+
+Definition of done:
+- Every seeded account reaches the correct role-shaped workspace.
+- Owner has the highest organization visibility and employee ID authority.
+- Organization preferences are constrained, validated, and behaviorally connected.
+- The live showcase fills the major workflows with six months of coherent records.
+- API, database, documents, and role scopes pass automated and live checks.
+- A new AI model or engineer can resume from one authoritative document without reading the full conversation history.

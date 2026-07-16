@@ -30,10 +30,10 @@ export type HrLocation = {
 
 export type HrEmployee = {
   id: string
-  annualCtc: number
+  annualCompensation: number
   bankAccountHolderName: string | null
   bankAccountNumber: string | null
-  bankIfsc: string | null
+  bankRoutingCode: string | null
   bankName: string | null
   code: string
   department: string
@@ -50,7 +50,7 @@ export type HrEmployee = {
 
 export type SalaryRevision = {
   id: string
-  annualCtc: number
+  annualCompensation: number
   createdAt: string
   effectiveFrom: string
   employeeId: string
@@ -73,11 +73,50 @@ export type HrMasterData = {
   employees: HrEmployee[]
   locations: HrLocation[]
   organization: {
+    countryCode: string
+    currencyCode: string
     id: string
+    locale: string
     name: string
+    timezone: string
   } | null
   salaryRevisions: SalaryRevision[]
 }
+
+export const organizationUpdateSchema = z.object({
+  countryCode: z.string().trim().length(2).transform((value) => value.toUpperCase()),
+  currencyCode: z.string().trim().length(3).transform((value) => value.toUpperCase()),
+  locale: z
+    .string()
+    .trim()
+    .min(2)
+    .max(35)
+    .refine((value) => {
+      try {
+        new Intl.Locale(value)
+        return true
+      } catch {
+        return false
+      }
+    }, 'Locale must be a valid BCP 47 language tag'),
+  name: z.string().trim().min(2).max(120),
+  organizationId: postgresUuidSchema,
+  timezone: z
+    .string()
+    .trim()
+    .min(2)
+    .max(100)
+    .refine((value) => {
+      try {
+        new Intl.DateTimeFormat('en', { timeZone: value })
+        return true
+      } catch {
+        return false
+      }
+    }, 'Timezone must be a valid IANA timezone'),
+})
+
+export type OrganizationUpdateInput = z.infer<typeof organizationUpdateSchema>
 
 export const departmentCreateSchema = z.object({
   name: z.string().min(2).max(120),
@@ -94,7 +133,7 @@ export const departmentArchiveSchema = z.object({
 
 export const locationCreateSchema = z.object({
   city: z.string().min(2).max(120),
-  countryCode: z.string().length(2).default('IN'),
+  countryCode: z.string().length(2).default('US'),
   isActive: z.boolean().default(true),
   name: z.string().min(2).max(140),
   organizationId: postgresUuidSchema,
@@ -115,25 +154,25 @@ const optionalBankTextSchema = (max: number) =>
     .optional()
     .transform((value) => (value ? value : null))
 
-const bankAccountNumberSchema = optionalBankTextSchema(20).refine(
-  (value) => value === null || /^[0-9]{6,20}$/.test(value),
-  'Bank account number must be 6 to 20 digits',
+const bankAccountNumberSchema = optionalBankTextSchema(34).refine(
+  (value) => value === null || /^[A-Za-z0-9][A-Za-z0-9 -]{3,33}$/.test(value),
+  'Account identifier must be 4 to 34 letters or digits',
 )
 
-const bankIfscSchema = z
+const bankRoutingCodeSchema = z
   .string()
   .trim()
-  .max(11)
+  .max(34)
   .optional()
   .transform((value) => (value ? value.toUpperCase() : null))
-  .refine((value) => value === null || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value), {
-    message: 'IFSC must use the standard 11-character format',
+  .refine((value) => value === null || /^[A-Z0-9][A-Z0-9 -]{3,33}$/.test(value), {
+    message: 'Routing code must be 4 to 34 letters or digits',
   })
 
 const employeeWriteSchema = z.object({
   bankAccountHolderName: optionalBankTextSchema(120),
   bankAccountNumber: bankAccountNumberSchema,
-  bankIfsc: bankIfscSchema,
+  bankRoutingCode: bankRoutingCodeSchema,
   bankName: optionalBankTextSchema(120),
   code: z.string().trim().min(2).max(40),
   departmentId: postgresUuidSchema,
@@ -147,13 +186,13 @@ const employeeWriteSchema = z.object({
 })
 
 export const hrEmployeeCreateSchema = employeeWriteSchema.extend({
-  annualCtc: z.number().min(0),
+  annualCompensation: z.number().min(0),
 })
 
 export const hrEmployeeUpdateSchema = employeeWriteSchema
 
 export const salaryRevisionCreateSchema = z.object({
-  annualCtc: z.number().min(0),
+  annualCompensation: z.number().min(0),
   effectiveFrom: z.iso.date(),
   employeeId: postgresUuidSchema,
   organizationId: postgresUuidSchema,
@@ -189,10 +228,10 @@ export class HrMasterDataWriteError extends Error {
 
 type EmployeeRow = {
   id: string
-  annual_ctc: number | string
+  annual_compensation: number | string
   bank_account_holder_name: string | null
   bank_account_number: string | null
-  bank_ifsc: string | null
+  bank_routing_code: string | null
   bank_name: string | null
   department_id: string | null
   departments: { id: string; name: string } | { id: string; name: string }[] | null
@@ -201,7 +240,10 @@ type EmployeeRow = {
   full_name: string
   joining_date: string
   location: string
+  manager_profile_id: string | null
+  organization_id: string
   photo_path: string | null
+  profile_id: string | null
   status: HrEmployee['status']
   work_email: string | null
   work_location_id: string | null
@@ -240,7 +282,7 @@ type LocationRow = {
 
 type SalaryRevisionRow = {
   id: string
-  annual_ctc: number | string
+  annual_compensation: number | string
   created_at: string
   effective_from: string
   employee_id: string
@@ -257,8 +299,12 @@ type AuditRow = {
 }
 
 type ProfileRow = {
+  id: string
   organization_id: string | null
-  organizations: { id: string; name: string } | { id: string; name: string }[] | null
+  organizations:
+    | { country_code: string; currency_code: string; id: string; locale: string; name: string; timezone: string }
+    | { country_code: string; currency_code: string; id: string; locale: string; name: string; timezone: string }[]
+    | null
 }
 
 type RoleRow = {
@@ -313,11 +359,19 @@ export type HrMasterDataRepository = {
     actorUserId: string | undefined,
     input: LocationUpdateInput,
   ) => Promise<{ data?: HrLocation; status: WriteStatus }>
+  updateOrganization: (
+    actorUserId: string | undefined,
+    input: OrganizationUpdateInput,
+  ) => Promise<{ data?: NonNullable<HrMasterData['organization']>; status: WriteStatus }>
 }
 
 const fallbackOrganization = {
+  countryCode: 'US',
+  currencyCode: 'USD',
   id: '00000000-0000-0000-0000-000000000001',
-  name: 'VetanFlow Demo India',
+  locale: 'en-US',
+  name: 'VetanFlow Labs',
+  timezone: 'America/New_York',
 }
 
 const fallbackDepartments: HrDepartment[] = [
@@ -344,30 +398,30 @@ const fallbackDepartments: HrDepartment[] = [
 const fallbackLocations: HrLocation[] = [
   {
     id: '20000000-0000-0000-0000-000000000001',
-    city: 'Kolkata',
-    countryCode: 'IN',
+    city: 'New York',
+    countryCode: 'US',
     isActive: true,
-    name: 'Kolkata HQ',
+    name: 'New York HQ',
     organizationId: fallbackOrganization.id,
-    state: 'West Bengal',
+    state: 'New York',
   },
   {
     id: '20000000-0000-0000-0000-000000000002',
-    city: 'Mumbai',
-    countryCode: 'IN',
+    city: 'Austin',
+    countryCode: 'US',
     isActive: true,
-    name: 'Mumbai Finance Office',
+    name: 'Austin Finance Office',
     organizationId: fallbackOrganization.id,
-    state: 'Maharashtra',
+    state: 'Texas',
   },
   {
     id: '20000000-0000-0000-0000-000000000003',
-    city: 'Bengaluru',
-    countryCode: 'IN',
+    city: 'Seattle',
+    countryCode: 'US',
     isActive: true,
-    name: 'Bengaluru Operations Hub',
+    name: 'Seattle Operations Hub',
     organizationId: fallbackOrganization.id,
-    state: 'Karnataka',
+    state: 'Washington',
   },
 ]
 
@@ -377,10 +431,10 @@ function firstRelation<T>(value: T | T[] | null) {
 
 const employeeSelectQuery = `
   id,
-  annual_ctc,
+  annual_compensation,
   bank_account_holder_name,
   bank_account_number,
-  bank_ifsc,
+  bank_routing_code,
   bank_name,
   department_id,
   designation,
@@ -388,7 +442,10 @@ const employeeSelectQuery = `
   full_name,
   joining_date,
   location,
+  manager_profile_id,
+  organization_id,
   photo_path,
+  profile_id,
   status,
   work_email,
   work_location_id,
@@ -406,10 +463,10 @@ function toEmployee(row: EmployeeRow, photoUrl: string | null = null): HrEmploye
 
   return {
     id: row.id,
-    annualCtc: Number(row.annual_ctc),
+    annualCompensation: Number(row.annual_compensation),
     bankAccountHolderName: row.bank_account_holder_name,
     bankAccountNumber: row.bank_account_number,
-    bankIfsc: row.bank_ifsc,
+    bankRoutingCode: row.bank_routing_code,
     bankName: row.bank_name,
     code: row.employee_code,
     department: department?.name ?? 'Unassigned',
@@ -465,7 +522,7 @@ function toLocation(row: LocationRow): HrLocation {
 function toSalaryRevision(row: SalaryRevisionRow): SalaryRevision {
   return {
     id: row.id,
-    annualCtc: Number(row.annual_ctc),
+    annualCompensation: Number(row.annual_compensation),
     createdAt: row.created_at,
     effectiveFrom: row.effective_from,
     employeeId: row.employee_id,
@@ -493,7 +550,7 @@ function getFallbackMasterData(): HrMasterData {
       ...employee,
       bankAccountHolderName: null,
       bankAccountNumber: null,
-      bankIfsc: null,
+      bankRoutingCode: null,
       bankName: null,
       departmentId:
         fallbackDepartments.find((department) => department.name === employee.department)?.id ?? null,
@@ -507,7 +564,7 @@ function getFallbackMasterData(): HrMasterData {
     organization: fallbackOrganization,
     salaryRevisions: fixtureEmployees.map((employee) => ({
       id: `salary_${employee.id}`,
-      annualCtc: employee.annualCtc,
+      annualCompensation: employee.annualCompensation,
       createdAt: '2026-07-04T00:00:00.000Z',
       effectiveFrom: '2026-01-01',
       employeeId: employee.id,
@@ -597,49 +654,15 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         return { data: getFallbackMasterData(), source: 'fixture' }
       }
 
-      const [
-        profileResult,
-        rolesResult,
-        departmentsResult,
-        locationsResult,
-        employeesResult,
-        salariesResult,
-        auditResult,
-      ] = await Promise.all([
-          supabase
-            .from('profiles')
-            .select('organization_id, organizations(id, name)')
-            .single(),
-          supabase.from('user_roles').select('role').order('role'),
-          supabase.from('departments').select('id, organization_id, name, is_active').order('name'),
-          supabase
-            .from('work_locations')
-            .select('id, organization_id, name, city, state, country_code, is_active')
-            .order('city'),
-          supabase
-            .from('employees')
-            .select(employeeSelectQuery)
-            .order('employee_code', { ascending: true }),
-          supabase
-            .from('salary_revisions')
-            .select('id, employee_id, annual_ctc, effective_from, reason, created_at')
-            .order('effective_from', { ascending: false }),
-          supabase
-            .from('audit_logs')
-            .select('id, action, entity_type, entity_id, metadata, created_at')
-            .order('created_at', { ascending: false })
-            .limit(50),
-        ])
+      const [profileResult, rolesResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, organization_id, organizations(id, name, country_code, currency_code, locale, timezone)')
+          .single(),
+        supabase.from('user_roles').select('role').order('role'),
+      ])
 
-      for (const result of [
-        profileResult,
-        rolesResult,
-        departmentsResult,
-        locationsResult,
-        employeesResult,
-        salariesResult,
-        auditResult,
-      ]) {
+      for (const result of [profileResult, rolesResult]) {
         if (result.error) {
           throw result.error
         }
@@ -647,28 +670,151 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
 
       const profile = profileResult.data as ProfileRow | null
       const organization = firstRelation(profile?.organizations ?? null)
-      const employeeRows = (employeesResult.data ?? []) as EmployeeRow[]
       const signingClient = getSupabaseServiceClient()
-      const employees = signingClient
-        ? await Promise.all(employeeRows.map((row) => toEmployeeWithPhoto(signingClient, row)))
-        : employeeRows.map((row) => toEmployee(row))
+
+      if (!profile?.organization_id || !signingClient) {
+        throw new Error('Supabase service role is required to load protected employee data')
+      }
+
+      const currentUserRoles = ((rolesResult.data ?? []) as RoleRow[]).map((row) => row.role)
+      const canViewSensitiveEmployeeData = hasAnyRole(currentUserRoles, ['owner', 'admin', 'hr', 'finance'])
+      const [departmentsResult, locationsResult, employeesResult, salariesResult, auditResult] = await Promise.all([
+        supabase.from('departments').select('id, organization_id, name, is_active').order('name'),
+        supabase
+          .from('work_locations')
+          .select('id, organization_id, name, city, state, country_code, is_active')
+          .order('city'),
+        signingClient
+          .from('employees')
+          .select(employeeSelectQuery)
+          .eq('organization_id', profile.organization_id)
+          .order('employee_code', { ascending: true }),
+        supabase
+          .from('salary_revisions')
+          .select('id, employee_id, annual_compensation, effective_from, reason, created_at')
+          .order('effective_from', { ascending: false }),
+        supabase
+          .from('audit_logs')
+          .select('id, action, entity_type, entity_id, metadata, created_at')
+          .order('created_at', { ascending: false })
+          .limit(50),
+      ])
+
+      for (const result of [departmentsResult, locationsResult, employeesResult, salariesResult, auditResult]) {
+        if (result.error) {
+          throw result.error
+        }
+      }
+
+      const employeeRows = ((employeesResult.data ?? []) as EmployeeRow[]).filter(
+        (row) =>
+          canViewSensitiveEmployeeData ||
+          row.profile_id === profile.id ||
+          row.manager_profile_id === profile.id,
+      )
+      const employees = await Promise.all(employeeRows.map((row) => toEmployeeWithPhoto(signingClient, row)))
+      const ownEmployeeIds = new Set(
+        employeeRows.filter((row) => row.profile_id === profile?.id).map((row) => row.id),
+      )
+      const visibleEmployees = canViewSensitiveEmployeeData
+        ? employees
+        : employees.map((employee) =>
+            ownEmployeeIds.has(employee.id)
+              ? employee
+              : {
+                  ...employee,
+                  annualCompensation: 0,
+                  bankAccountHolderName: null,
+                  bankAccountNumber: null,
+                  bankRoutingCode: null,
+                  bankName: null,
+                },
+          )
+      const salaryRevisions = ((salariesResult.data ?? []) as SalaryRevisionRow[]).map(toSalaryRevision)
 
       return {
         data: {
-          auditEntries: ((auditResult.data ?? []) as AuditRow[]).map(toAuditEntry),
-          currentUserRoles: ((rolesResult.data ?? []) as RoleRow[]).map((row) => row.role),
+          auditEntries: canViewSensitiveEmployeeData
+            ? ((auditResult.data ?? []) as AuditRow[]).map(toAuditEntry)
+            : [],
+          currentUserRoles,
           departments: ((departmentsResult.data ?? []) as DepartmentRow[]).map(toDepartment),
-          employees,
+          employees: visibleEmployees,
           locations: ((locationsResult.data ?? []) as LocationRow[]).map(toLocation),
           organization: organization
             ? {
+                countryCode: organization.country_code,
+                currencyCode: organization.currency_code,
                 id: organization.id,
+                locale: organization.locale,
                 name: organization.name,
+                timezone: organization.timezone,
               }
             : null,
-          salaryRevisions: ((salariesResult.data ?? []) as SalaryRevisionRow[]).map(toSalaryRevision),
+          salaryRevisions: canViewSensitiveEmployeeData
+            ? salaryRevisions
+            : salaryRevisions.filter((revision) => ownEmployeeIds.has(revision.employeeId)),
         },
         source: 'supabase',
+      }
+    },
+
+    async updateOrganization(actorUserId, input) {
+      const supabase = getSupabaseServiceClient()
+
+      if (!supabase) {
+        return { status: 'not_configured' }
+      }
+
+      if (!(await canWrite(actorUserId, input.organizationId, ['owner', 'admin']))) {
+        return { status: 'forbidden' }
+      }
+
+      const { data, error } = await supabase
+        .from('organizations')
+        .update({
+          country_code: input.countryCode,
+          currency_code: input.currencyCode,
+          locale: input.locale,
+          name: input.name,
+          timezone: input.timezone,
+        })
+        .eq('id', input.organizationId)
+        .select('id, name, country_code, currency_code, locale, timezone')
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+
+      if (!data) {
+        return { status: 'not_found' }
+      }
+
+      await supabase.from('audit_logs').insert({
+        action: 'organization_preferences_updated',
+        actor_id: actorUserId,
+        entity_id: input.organizationId,
+        entity_type: 'organization',
+        metadata: {
+          countryCode: input.countryCode,
+          currencyCode: input.currencyCode,
+          locale: input.locale,
+          timezone: input.timezone,
+        },
+        organization_id: input.organizationId,
+      })
+
+      return {
+        data: {
+          countryCode: data.country_code,
+          currencyCode: data.currency_code,
+          id: data.id,
+          locale: data.locale,
+          name: data.name,
+          timezone: data.timezone,
+        },
+        status: 'updated',
       }
     },
 
@@ -688,10 +834,10 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
       const { data, error } = await supabase
         .from('employees')
         .insert({
-          annual_ctc: input.annualCtc,
+          annual_compensation: input.annualCompensation,
           bank_account_holder_name: input.bankAccountHolderName,
           bank_account_number: input.bankAccountNumber,
-          bank_ifsc: input.bankIfsc,
+          bank_routing_code: input.bankRoutingCode,
           bank_name: input.bankName,
           department_id: input.departmentId,
           designation: input.role,
@@ -717,7 +863,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         entity_id: data.id,
         entity_type: 'employee',
         metadata: {
-          bank_details_present: Boolean(input.bankAccountNumber && input.bankIfsc),
+          bank_details_present: Boolean(input.bankAccountNumber && input.bankRoutingCode),
           employee_code: input.code,
           full_name: input.fullName,
           status: input.status,
@@ -725,9 +871,9 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         organization_id: input.organizationId,
       })
 
-      const salaryRevisionResult = await supabase.rpc('record_salary_revision', {
+      const salaryRevisionResult = await supabase.rpc('record_compensation_revision', {
         p_actor_id: actorUserId,
-        p_annual_ctc: input.annualCtc,
+        p_annual_compensation: input.annualCompensation,
         p_effective_from: input.joiningDate,
         p_employee_id: data.id,
         p_reason: 'Initial compensation',
@@ -1077,9 +1223,9 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         return { status: 'forbidden' }
       }
 
-      const { data, error } = await supabase.rpc('record_salary_revision', {
+      const { data, error } = await supabase.rpc('record_compensation_revision', {
         p_actor_id: actorUserId,
-        p_annual_ctc: input.annualCtc,
+        p_annual_compensation: input.annualCompensation,
         p_effective_from: input.effectiveFrom,
         p_employee_id: input.employeeId,
         p_reason: input.reason,
@@ -1224,7 +1370,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         .update({
           bank_account_holder_name: input.bankAccountHolderName,
           bank_account_number: input.bankAccountNumber,
-          bank_ifsc: input.bankIfsc,
+          bank_routing_code: input.bankRoutingCode,
           bank_name: input.bankName,
           department_id: input.departmentId,
           designation: input.role,
@@ -1252,7 +1398,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         entity_type: 'employee',
         metadata: {
           after: {
-            bank_details_present: Boolean(input.bankAccountNumber && input.bankIfsc),
+            bank_details_present: Boolean(input.bankAccountNumber && input.bankRoutingCode),
             employee_code: input.code,
             full_name: input.fullName,
             status: input.status,

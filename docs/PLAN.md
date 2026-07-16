@@ -1,44 +1,81 @@
 # Plan
 
-Build VetanFlow as an India-first payroll operations product with a real backend, real Supabase security boundaries, and a clean demo path. Phases 0-6 are complete for local review/demo; live production deployment remains an optional follow-up after choosing hosts.
+VetanFlow is a configurable payroll operations product with a React frontend, Express authority layer, Supabase security/data platform, role-shaped workspaces, and a repeatable live showcase.
 
-## Scope
+## Delivered Scope
 
-- In: React/Vite frontend, Express API, Supabase migrations, India payroll workflows, RBAC, audit trail, payslips, reports, CI, deployment notes, walkthrough material.
-- Out: Multi-country support, containerized deployment, client-selected roles, unrelated Supabase projects, production payment or banking integrations.
+- [x] React, Express, Supabase, TypeScript, tests, CI, and documentation foundation.
+- [x] Supabase Auth, profiles, organization roles, RLS, explicit grants, and server-controlled invitations.
+- [x] Employee, department, location, manager, compensation, photo, payment, and audit workflows.
+- [x] Employee digital ID plus authorized two-sided PDF download.
+- [x] Leave request, manager/HR decision, escalation, cancellation, and history.
+- [x] Attendance, holidays, overtime, loss of pay, source-month lock, and database protection.
+- [x] Payroll run generation, snapshots, adjustments, variance, maker-checker, and finalization.
+- [x] Private payslips, signed delivery, payout CSV, deductions CSV, and department-cost CSV.
+- [x] Distinct owner, admin, HR, finance, manager, and employee experiences.
+- [x] Validated organization country, currency, locale, and timezone controls.
+- [x] Public landing, animated tour, How It Works, journal, Terms, Privacy, and licenses.
+- [x] Twelve role accounts, ten employees, six payroll months, 54 lines, and 54 payslips.
+- [x] Account switching that prevents persisted owner sessions from hijacking other logins.
+- [x] Owner-wide employee ID authority and employee self-only ID authority.
+- [x] ID-card print/ribbon animation and complete SVG/transparent PNG brand pack.
+- [x] Unified local development, Vercel Express function adapter, and Render alternative.
+- [x] Optional frontend/backend Sentry integration.
+- [x] Zod input/environment validation, HTTP hardening, least-privilege Data API grants, and live role checks.
+- [x] Complete README, Handoff, AI Takeover, architecture, deployment, demo, automation, and phase documentation.
 
-## Completed
+## Current Quality Baseline
 
-[x] Create the monorepo foundation with `frontend`, `backend`, `supabase`, and `docs`.
-[x] Add the React dashboard shell and Express API skeleton.
-[x] Add India-first payroll calculation and tests.
-[x] Add Supabase schema, RLS, grants, seed data, and cloud setup notes.
-[x] Add Supabase Auth login, backend token verification, and server-controlled role assignment groundwork.
-[x] Verify owner/admin and employee RLS with real Supabase Auth users.
-[x] Build HR master data, employee photos, digital ID cards, and setup audit controls.
-[x] Build leave requests, attendance entries, holidays, payroll-impact summaries, and locked months.
-[x] Build payroll runs, adjustments, variance warnings, approval/finalization, and maker-checker rules.
-[x] Build payslip PDF generation, signed downloads, employee payslip archive, and CSV exports.
-[x] Push Phase 5 migrations to Supabase Cloud, regenerate types, and run live export/payslip smoke checks.
+- 7 test files and 62 tests passing.
+- Frontend/backend lint, typecheck, and production builds passing.
+- Deployment preflight passing.
+- 15 of 15 live readiness checks passing.
+- 12 of 12 account login and authorization checks passing.
+- npm audit reports zero vulnerabilities.
+- Supabase database lint reports no schema errors.
+- Desktop and compact mobile UI checks pass without page-level horizontal overflow.
 
-## Phase 6 Action Items
+## Phase 10: Hosted Production Operations
 
-[x] Refresh public README with the current feature set and run path.
-[x] Add demo walkthrough material.
-[x] Add deployment notes for frontend, backend, and Supabase Cloud.
-[x] Harden CI install behavior with `npm ci`, read-only permissions, concurrency, and timeout.
-[x] Add screenshot capture guide and Chrome-headless helper.
-[x] Add demo data reset checklist.
-[x] Add a recorded demo script and screenshot manifest.
-[x] Add Supabase-backed demo readiness checker and readiness output notes.
-[x] Add idempotent demo data preparation script.
-[x] Capture screenshots for the main owner/admin and employee flows.
-[x] Add authenticated screenshot automation for owner/admin and employee flows.
-[x] Add linked Supabase demo reset automation and rebuild the clean September 2026 demo month.
-[x] Fix employee payslip portal loading for RLS-visible payslips with hidden nested payroll run metadata.
-[x] Complete final handoff, phase tracker, Graphify update, and full verification at Phase 6 close.
+Status: Not started
 
-## Open Questions
+Goal: prove the current product in a controlled staging environment before adding more product surface.
 
-- Which host should be used for the live backend: Render, Railway, Fly.io, or another Node service?
-- Which static host should be used for the frontend: Vercel, Netlify, Cloudflare Pages, or another provider?
+Planned work:
+
+- [ ] Deploy the Vercel frontend/API shape and connect the intended Supabase project.
+- [ ] Add staging and production environment separation.
+- [ ] Configure Sentry DSNs, source maps, releases, alerts, and low-volume tracing.
+- [ ] Enable Supabase leaked-password protection.
+- [ ] Configure branded Auth emails and monitored transactional delivery.
+- [ ] Define secret rotation, backup retention, restore tests, log retention, and incident response.
+- [ ] Run all 12 role accounts and the employee-to-payslip flow against staging.
+- [ ] Add production branch protection and deployment approval policy.
+- [ ] Replace evaluation legal text with counsel-reviewed terms before real customer use.
+- [ ] Complete independent penetration testing before real payroll data.
+
+Definition of done:
+
+- Staging deploys from GitHub with passing CI.
+- Every public route and protected workflow passes end-to-end.
+- Monitoring and alerting receive controlled test events.
+- Backup restore is documented and proven.
+- Auth email delivery and account switching work on the hosted domain.
+- No development credentials or showcase secrets remain in production.
+
+## Deliberately Out Of Scope
+
+- Docker-based local or production workflows.
+- User-selected roles.
+- Hidden global superadmin behavior.
+- Country-specific statutory filing or tax-engine claims.
+- Real bank transfer execution.
+- Production use of showcase credentials or data.
+- A broad frontend rewrite before hosted operational proof.
+
+## Decision Queue
+
+1. Confirm the staging and final production domains.
+2. Decide whether Vercel serverless limits suit PDF generation or whether Render should host the API.
+3. Select transactional email and Sentry alert recipients.
+4. Define the first country-specific compliance pack only after the region-neutral core is hosted and stable.

@@ -41,3 +41,13 @@ npm run graphify:update
 ```
 
 Use `npm run graphify:extract` only when rebuilding the graph from scratch. Do not commit `graphify-out/cache` or `.graphify_*` temp files.
+
+For focused codebase questions, use the local CLI directly:
+
+```sh
+.venv/bin/graphify query "How does employee ID authorization work?"
+.venv/bin/graphify explain "Payroll"
+.venv/bin/graphify path "WorkspaceApp" "Supabase"
+```
+
+The globally installed `graphify` command is not required; this repository intentionally uses `.venv/bin/graphify` through npm scripts.

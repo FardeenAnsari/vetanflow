@@ -1,0 +1,142 @@
+<svg width="1600" height="690" viewBox="0 0 1600 690" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">The complete VetanFlow payroll journey</title>
+  <desc id="desc">Seven animated stages from owner setup and employee records through attendance, payroll calculation, approval, finalization, and private payslip delivery.</desc>
+  <style>
+    .heading { font: 800 34px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .sub { font: 500 16px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .num { font: 800 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .title { font: 750 17px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .copy { font: 520 13px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .tag { font: 700 11px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .stage { animation: stage 14s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .s2 { animation-delay: -12s; } .s3 { animation-delay: -10s; } .s4 { animation-delay: -8s; }
+    .s5 { animation-delay: -6s; } .s6 { animation-delay: -4s; } .s7 { animation-delay: -2s; }
+    .flow { stroke-dasharray: 9 11; animation: flow 1.8s linear infinite; }
+    .cursor { animation: cursor 14s cubic-bezier(.4,0,.2,1) infinite; }
+    .check { animation: check 3.5s ease-in-out infinite; }
+    @keyframes flow { to { stroke-dashoffset: -40; } }
+    @keyframes stage { 0%, 10%, 100% { transform: translateY(-7px); } 14%, 96% { transform: translateY(0); } }
+    @keyframes cursor {
+      0%, 8% { transform: translateX(0); }
+      14%, 22% { transform: translateX(214px); }
+      28%, 36% { transform: translateX(428px); }
+      42%, 50% { transform: translateX(642px); }
+      56%, 64% { transform: translateX(856px); }
+      70%, 78% { transform: translateX(1070px); }
+      84%, 100% { transform: translateX(1284px); }
+    }
+    @keyframes check { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) {
+      .stage, .flow, .cursor, .check { animation: none !important; }
+    }
+  </style>
+
+  <rect width="1600" height="690" rx="24" fill="#F7FAFC"/>
+  <rect x="36" y="34" width="1528" height="622" rx="18" fill="#FFFFFF" stroke="#D7E3EE"/>
+  <text x="74" y="89" class="heading" fill="#0B2239">One employee. One controlled payroll journey.</text>
+  <text x="74" y="120" class="sub" fill="#60778B">Every handoff has an owner, a server-side rule, and a durable record.</text>
+  <rect x="1326" y="69" width="198" height="38" rx="6" fill="#E7FBF3"/>
+  <circle cx="1350" cy="88" r="6" fill="#22A06B" class="check"/>
+  <text x="1365" y="93" class="tag" fill="#126B46">AUDITABLE END TO END</text>
+
+  <path d="M159 202H1443" stroke="#B8CCDC" stroke-width="3" class="flow"/>
+  <g class="cursor">
+    <circle cx="159" cy="202" r="14" fill="#2F80ED" opacity=".18"/>
+    <circle cx="159" cy="202" r="6" fill="#2F80ED"/>
+  </g>
+
+  <g class="stage">
+    <rect x="74" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="90" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="101" y="195" class="num" fill="#FFFFFF">01</text>
+    <circle cx="159" cy="202" r="18" fill="#E6F0FF" stroke="#2F80ED"/>
+    <path d="M153 202h12M159 196v12" stroke="#2F80ED" stroke-width="2.2"/>
+    <text x="90" y="245" class="title" fill="#102D47">Create access</text>
+    <text x="90" y="273" class="copy" fill="#60778B">Owner invites a member</text><text x="90" y="293" class="copy" fill="#60778B">and assigns one scoped role.</text>
+    <rect x="90" y="320" width="74" height="24" rx="4" fill="#E6F0FF"/><text x="103" y="336" class="tag" fill="#1E64B7">OWNER</text>
+    <text x="90" y="374" class="tag" fill="#8599AA">WRITES</text><text x="90" y="397" class="copy" fill="#334E63">Auth user · profile · role</text>
+  </g>
+
+  <g class="stage s2">
+    <rect x="288" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="304" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="315" y="195" class="num" fill="#FFFFFF">02</text>
+    <circle cx="373" cy="202" r="18" fill="#EDF8FF" stroke="#3B9DDD"/>
+    <path d="M367 196h12v13h-12zM370 193h6" stroke="#277FB8" stroke-width="2" fill="none"/>
+    <text x="304" y="245" class="title" fill="#102D47">Build employee</text>
+    <text x="304" y="273" class="copy" fill="#60778B">HR adds identity, team,</text><text x="304" y="293" class="copy" fill="#60778B">manager, pay, and payout data.</text>
+    <rect x="304" y="320" width="54" height="24" rx="4" fill="#EDF8FF"/><text x="319" y="336" class="tag" fill="#277FB8">HR</text>
+    <text x="304" y="374" class="tag" fill="#8599AA">WRITES</text><text x="304" y="397" class="copy" fill="#334E63">Employee · salary history</text>
+  </g>
+
+  <g class="stage s3">
+    <rect x="502" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="518" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="529" y="195" class="num" fill="#FFFFFF">03</text>
+    <circle cx="587" cy="202" r="18" fill="#FFF6DC" stroke="#E8A317"/>
+    <path d="M580 197h14v12h-14zM583 194v6M591 194v6" stroke="#A66C00" stroke-width="2" fill="none"/>
+    <text x="518" y="245" class="title" fill="#102D47">Capture time</text>
+    <text x="518" y="273" class="copy" fill="#60778B">Manager records attendance;</text><text x="518" y="293" class="copy" fill="#60778B">leave moves through approval.</text>
+    <rect x="518" y="320" width="84" height="24" rx="4" fill="#FFF6DC"/><text x="529" y="336" class="tag" fill="#8C5A00">MANAGER</text>
+    <text x="518" y="374" class="tag" fill="#8599AA">WRITES</text><text x="518" y="397" class="copy" fill="#334E63">Attendance · leave decision</text>
+  </g>
+
+  <g class="stage s4">
+    <rect x="716" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="732" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="743" y="195" class="num" fill="#FFFFFF">04</text>
+    <circle cx="801" cy="202" r="18" fill="#FFF1E7" stroke="#F28C45"/>
+    <path d="M795 201h12v9h-12zM797 201v-4a4 4 0 018 0v4" stroke="#B65A1C" stroke-width="2" fill="none"/>
+    <text x="732" y="245" class="title" fill="#102D47">Lock month</text>
+    <text x="732" y="273" class="copy" fill="#60778B">HR freezes source time so</text><text x="732" y="293" class="copy" fill="#60778B">payroll cannot drift mid-run.</text>
+    <rect x="732" y="320" width="54" height="24" rx="4" fill="#FFF1E7"/><text x="747" y="336" class="tag" fill="#A74F17">HR</text>
+    <text x="732" y="374" class="tag" fill="#8599AA">GUARD</text><text x="732" y="397" class="copy" fill="#334E63">Database lock trigger</text>
+  </g>
+
+  <g class="stage s5">
+    <rect x="930" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="946" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="957" y="195" class="num" fill="#FFFFFF">05</text>
+    <circle cx="1015" cy="202" r="18" fill="#F0EEFF" stroke="#7D70D6"/>
+    <path d="M1009 195h12v14h-12zM1012 199h6M1012 203h6" stroke="#5B4FB6" stroke-width="2" fill="none"/>
+    <text x="946" y="245" class="title" fill="#102D47">Calculate run</text>
+    <text x="946" y="273" class="copy" fill="#60778B">Finance creates snapshots,</text><text x="946" y="293" class="copy" fill="#60778B">adjustments, and variance flags.</text>
+    <rect x="946" y="320" width="72" height="24" rx="4" fill="#F0EEFF"/><text x="956" y="336" class="tag" fill="#5B4FB6">FINANCE</text>
+    <text x="946" y="374" class="tag" fill="#8599AA">WRITES</text><text x="946" y="397" class="copy" fill="#334E63">Run · lines · snapshots</text>
+  </g>
+
+  <g class="stage s6">
+    <rect x="1144" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="1160" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="1171" y="195" class="num" fill="#FFFFFF">06</text>
+    <circle cx="1229" cy="202" r="18" fill="#E7FBF3" stroke="#22A06B"/>
+    <path d="M1222 202l5 5 9-11" stroke="#168A58" stroke-width="2.4" fill="none"/>
+    <text x="1160" y="245" class="title" fill="#102D47">Check &amp; close</text>
+    <text x="1160" y="273" class="copy" fill="#60778B">A different operator approves</text><text x="1160" y="293" class="copy" fill="#60778B">and finalizes immutable pay.</text>
+    <rect x="1160" y="320" width="72" height="24" rx="4" fill="#E7FBF3"/><text x="1170" y="336" class="tag" fill="#126B46">CHECKER</text>
+    <text x="1160" y="374" class="tag" fill="#8599AA">GUARD</text><text x="1160" y="397" class="copy" fill="#334E63">Maker-checker · trigger</text>
+  </g>
+
+  <g class="stage s7">
+    <rect x="1358" y="160" width="170" height="266" rx="10" fill="#F8FBFE" stroke="#BFD2E1"/>
+    <rect x="1374" y="176" width="34" height="28" rx="5" fill="#102D47"/><text x="1385" y="195" class="num" fill="#FFFFFF">07</text>
+    <circle cx="1443" cy="202" r="18" fill="#E8F3FF" stroke="#2F80ED"/>
+    <path d="M1437 195h12v15h-12zM1439 199h8M1439 203h8M1439 207h5" stroke="#1E64B7" stroke-width="2" fill="none"/>
+    <text x="1374" y="245" class="title" fill="#102D47">Deliver safely</text>
+    <text x="1374" y="273" class="copy" fill="#60778B">PDFs stay private; employees</text><text x="1374" y="293" class="copy" fill="#60778B">receive short-lived signed links.</text>
+    <rect x="1374" y="320" width="84" height="24" rx="4" fill="#E8F3FF"/><text x="1385" y="336" class="tag" fill="#1E64B7">EMPLOYEE</text>
+    <text x="1374" y="374" class="tag" fill="#8599AA">OUTPUT</text><text x="1374" y="397" class="copy" fill="#334E63">Payslip · exports · audit</text>
+  </g>
+
+  <g transform="translate(74 462)">
+    <rect width="1454" height="154" rx="10" fill="#102D47"/>
+    <text x="22" y="31" class="tag" fill="#88A4BA">REQUEST PATH</text>
+    <g transform="translate(22 50)">
+      <rect width="176" height="66" rx="7" fill="#173A57"/><text x="16" y="27" class="title" fill="#FFFFFF">React workspace</text><text x="16" y="49" class="copy" fill="#AFC4D5">role-shaped screens</text>
+      <path d="M188 33h42" stroke="#5D7C94" stroke-width="2"/><path d="M224 27l8 6-8 6" stroke="#5D7C94" stroke-width="2" fill="none"/>
+      <rect x="242" width="176" height="66" rx="7" fill="#173A57"/><text x="258" y="27" class="title" fill="#FFFFFF">Express API</text><text x="258" y="49" class="copy" fill="#AFC4D5">validation + domain rules</text>
+      <path d="M430 33h42" stroke="#5D7C94" stroke-width="2"/><path d="M466 27l8 6-8 6" stroke="#5D7C94" stroke-width="2" fill="none"/>
+      <rect x="484" width="176" height="66" rx="7" fill="#173A57"/><text x="500" y="27" class="title" fill="#FFFFFF">Supabase Auth</text><text x="500" y="49" class="copy" fill="#AFC4D5">verified session identity</text>
+      <path d="M672 33h42" stroke="#5D7C94" stroke-width="2"/><path d="M708 27l8 6-8 6" stroke="#5D7C94" stroke-width="2" fill="none"/>
+      <rect x="726" width="176" height="66" rx="7" fill="#173A57"/><text x="742" y="27" class="title" fill="#FFFFFF">Postgres + RLS</text><text x="742" y="49" class="copy" fill="#AFC4D5">tenant + role boundaries</text>
+      <path d="M914 33h42" stroke="#5D7C94" stroke-width="2"/><path d="M950 27l8 6-8 6" stroke="#5D7C94" stroke-width="2" fill="none"/>
+      <rect x="968" width="176" height="66" rx="7" fill="#173A57"/><text x="984" y="27" class="title" fill="#FFFFFF">Private Storage</text><text x="984" y="49" class="copy" fill="#AFC4D5">photos + payslip PDFs</text>
+      <path d="M1156 33h42" stroke="#5D7C94" stroke-width="2"/><path d="M1192 27l8 6-8 6" stroke="#5D7C94" stroke-width="2" fill="none"/>
+      <rect x="1210" width="200" height="66" rx="7" fill="#E7FBF3"/><text x="1226" y="27" class="title" fill="#126B46">Auditable outcome</text><text x="1226" y="49" class="copy" fill="#3E6D5B">private, traceable, exportable</text>
+    </g>
+  </g>
+</svg>

@@ -19,7 +19,7 @@ type PayrollExportRunLineRow = {
     | {
         bank_account_holder_name: string | null
         bank_account_number: string | null
-        bank_ifsc: string | null
+        bank_routing_code: string | null
         bank_name: string | null
         departments: { name: string } | { name: string }[] | null
         employee_code: string
@@ -28,7 +28,7 @@ type PayrollExportRunLineRow = {
     | Array<{
         bank_account_holder_name: string | null
         bank_account_number: string | null
-        bank_ifsc: string | null
+        bank_routing_code: string | null
         bank_name: string | null
         departments: { name: string } | { name: string }[] | null
         employee_code: string
@@ -59,13 +59,13 @@ type PayrollExportLine = {
   employeeCode: string
   employeeName: string
   grossPay: number
-  ifsc: string | null
+  routingCode: string | null
   netPay: number
-  statutory: {
-    employeeEsi: number
-    employeePf: number
-    professionalTax: number
-    tds: number
+  deductions: {
+    localPayrollTax: number
+    retirementContribution: number
+    socialInsurance: number
+    withholdingTax: number
   }
   totalDeductions: number
   totalEarnings: number
@@ -76,7 +76,7 @@ export type PayrollCsvExport = {
   filename: string
 }
 
-export const payrollExportTypeSchema = z.enum(['bank', 'department-cost', 'statutory'])
+export const payrollExportTypeSchema = z.enum(['bank', 'deductions', 'department-cost'])
 
 export type PayrollExportType = z.infer<typeof payrollExportTypeSchema>
 
@@ -108,6 +108,10 @@ function getNestedNumber(value: unknown, path: string[]) {
   }
 
   return typeof current === 'number' ? current : 0
+}
+
+function getSnapshotDeduction(snapshot: unknown, key: string) {
+  return getNestedNumber(snapshot, ['payroll', 'deductionSummary', key])
 }
 
 function formatMoney(value: number) {
@@ -155,13 +159,13 @@ function toExportLine(row: PayrollExportRunLineRow): PayrollExportLine | null {
     employeeCode: employee.employee_code,
     employeeName: employee.full_name,
     grossPay: Number(row.gross_pay),
-    ifsc: employee.bank_ifsc,
+    routingCode: employee.bank_routing_code,
     netPay: Number(row.net_pay),
-    statutory: {
-      employeeEsi: getNestedNumber(row.calculation_snapshot, ['payroll', 'statutory', 'employeeEsi']),
-      employeePf: getNestedNumber(row.calculation_snapshot, ['payroll', 'statutory', 'employeePf']),
-      professionalTax: getNestedNumber(row.calculation_snapshot, ['payroll', 'statutory', 'professionalTax']),
-      tds: getNestedNumber(row.calculation_snapshot, ['payroll', 'statutory', 'tds']),
+    deductions: {
+      localPayrollTax: getSnapshotDeduction(row.calculation_snapshot, 'localPayrollTax'),
+      retirementContribution: getSnapshotDeduction(row.calculation_snapshot, 'retirementContribution'),
+      socialInsurance: getSnapshotDeduction(row.calculation_snapshot, 'socialInsurance'),
+      withholdingTax: getSnapshotDeduction(row.calculation_snapshot, 'withholdingTax'),
     },
     totalDeductions: Number(row.total_deductions),
     totalEarnings: Number(row.total_earnings),
@@ -179,7 +183,7 @@ function getRunLines(run: PayrollExportRunRow) {
 function buildBankExport(run: PayrollExportRunRow, lines: PayrollExportLine[]): PayrollCsvExport {
   const periodSlug = getPeriodSlug(run)
   const rows = lines.map((line) => {
-    const isReady = Boolean(line.accountHolderName && line.accountNumber && line.ifsc)
+    const isReady = Boolean(line.accountHolderName && line.accountNumber && line.routingCode)
 
     return [
       line.employeeCode,
@@ -187,7 +191,7 @@ function buildBankExport(run: PayrollExportRunRow, lines: PayrollExportLine[]): 
       line.accountHolderName,
       line.bankName,
       line.accountNumber,
-      line.ifsc,
+      line.routingCode,
       formatMoney(line.netPay),
       `Salary ${periodSlug}`,
       isReady ? 'ready' : 'missing_bank_details',
@@ -202,7 +206,7 @@ function buildBankExport(run: PayrollExportRunRow, lines: PayrollExportLine[]): 
         'Account Holder Name',
         'Bank Name',
         'Account Number',
-        'IFSC',
+        'Routing Code',
         'Net Pay',
         'Narration',
         'Status',
@@ -213,26 +217,26 @@ function buildBankExport(run: PayrollExportRunRow, lines: PayrollExportLine[]): 
   }
 }
 
-function buildStatutoryExport(run: PayrollExportRunRow, lines: PayrollExportLine[]): PayrollCsvExport {
+function buildDeductionsExport(run: PayrollExportRunRow, lines: PayrollExportLine[]): PayrollCsvExport {
   const periodSlug = getPeriodSlug(run)
   const total = lines.reduce(
     (summary, line) => ({
-      employeeEsi: summary.employeeEsi + line.statutory.employeeEsi,
-      employeePf: summary.employeePf + line.statutory.employeePf,
       grossPay: summary.grossPay + line.grossPay,
+      localPayrollTax: summary.localPayrollTax + line.deductions.localPayrollTax,
       netPay: summary.netPay + line.netPay,
-      professionalTax: summary.professionalTax + line.statutory.professionalTax,
-      tds: summary.tds + line.statutory.tds,
+      retirementContribution: summary.retirementContribution + line.deductions.retirementContribution,
+      socialInsurance: summary.socialInsurance + line.deductions.socialInsurance,
       totalDeductions: summary.totalDeductions + line.totalDeductions,
+      withholdingTax: summary.withholdingTax + line.deductions.withholdingTax,
     }),
     {
-      employeeEsi: 0,
-      employeePf: 0,
       grossPay: 0,
+      localPayrollTax: 0,
       netPay: 0,
-      professionalTax: 0,
-      tds: 0,
+      retirementContribution: 0,
+      socialInsurance: 0,
       totalDeductions: 0,
+      withholdingTax: 0,
     },
   )
   const rows = [
@@ -240,10 +244,10 @@ function buildStatutoryExport(run: PayrollExportRunRow, lines: PayrollExportLine
       line.employeeCode,
       line.employeeName,
       formatMoney(line.grossPay),
-      formatMoney(line.statutory.employeePf),
-      formatMoney(line.statutory.employeeEsi),
-      formatMoney(line.statutory.professionalTax),
-      formatMoney(line.statutory.tds),
+      formatMoney(line.deductions.retirementContribution),
+      formatMoney(line.deductions.socialInsurance),
+      formatMoney(line.deductions.localPayrollTax),
+      formatMoney(line.deductions.withholdingTax),
       formatMoney(line.totalDeductions),
       formatMoney(line.netPay),
     ]),
@@ -251,10 +255,10 @@ function buildStatutoryExport(run: PayrollExportRunRow, lines: PayrollExportLine
       'TOTAL',
       '',
       formatMoney(total.grossPay),
-      formatMoney(total.employeePf),
-      formatMoney(total.employeeEsi),
-      formatMoney(total.professionalTax),
-      formatMoney(total.tds),
+      formatMoney(total.retirementContribution),
+      formatMoney(total.socialInsurance),
+      formatMoney(total.localPayrollTax),
+      formatMoney(total.withholdingTax),
       formatMoney(total.totalDeductions),
       formatMoney(total.netPay),
     ],
@@ -266,16 +270,16 @@ function buildStatutoryExport(run: PayrollExportRunRow, lines: PayrollExportLine
         'Employee Code',
         'Employee Name',
         'Gross Pay',
-        'Employee PF',
-        'Employee ESI',
-        'Professional Tax',
-        'TDS',
+        'Retirement Contribution',
+        'Social Insurance',
+        'Local Payroll Tax',
+        'Withholding Tax',
         'Total Deductions',
         'Net Pay',
       ],
       rows,
     ),
-    filename: `statutory-summary-${periodSlug}.csv`,
+    filename: `deductions-summary-${periodSlug}.csv`,
   }
 }
 
@@ -284,15 +288,15 @@ function buildDepartmentCostExport(run: PayrollExportRunRow, lines: PayrollExpor
   const byDepartment = new Map<
     string,
     {
-      employeeEsi: number
-      employeePf: number
       grossPay: number
       headcount: number
+      localPayrollTax: number
       netPay: number
-      professionalTax: number
-      tds: number
+      retirementContribution: number
+      socialInsurance: number
       totalDeductions: number
       totalEarnings: number
+      withholdingTax: number
     }
   >()
 
@@ -300,26 +304,26 @@ function buildDepartmentCostExport(run: PayrollExportRunRow, lines: PayrollExpor
     const current =
       byDepartment.get(line.department) ??
       {
-        employeeEsi: 0,
-        employeePf: 0,
         grossPay: 0,
         headcount: 0,
+        localPayrollTax: 0,
         netPay: 0,
-        professionalTax: 0,
-        tds: 0,
+        retirementContribution: 0,
+        socialInsurance: 0,
         totalDeductions: 0,
         totalEarnings: 0,
+        withholdingTax: 0,
       }
 
-    current.employeeEsi += line.statutory.employeeEsi
-    current.employeePf += line.statutory.employeePf
     current.grossPay += line.grossPay
     current.headcount += 1
+    current.localPayrollTax += line.deductions.localPayrollTax
     current.netPay += line.netPay
-    current.professionalTax += line.statutory.professionalTax
-    current.tds += line.statutory.tds
+    current.retirementContribution += line.deductions.retirementContribution
+    current.socialInsurance += line.deductions.socialInsurance
     current.totalDeductions += line.totalDeductions
     current.totalEarnings += line.totalEarnings
+    current.withholdingTax += line.deductions.withholdingTax
     byDepartment.set(line.department, current)
   }
 
@@ -332,10 +336,10 @@ function buildDepartmentCostExport(run: PayrollExportRunRow, lines: PayrollExpor
       formatMoney(summary.totalEarnings),
       formatMoney(summary.totalDeductions),
       formatMoney(summary.netPay),
-      formatMoney(summary.employeePf),
-      formatMoney(summary.employeeEsi),
-      formatMoney(summary.professionalTax),
-      formatMoney(summary.tds),
+      formatMoney(summary.retirementContribution),
+      formatMoney(summary.socialInsurance),
+      formatMoney(summary.localPayrollTax),
+      formatMoney(summary.withholdingTax),
     ])
 
   return {
@@ -347,10 +351,10 @@ function buildDepartmentCostExport(run: PayrollExportRunRow, lines: PayrollExpor
         'Total Earnings',
         'Total Deductions',
         'Net Pay',
-        'Employee PF',
-        'Employee ESI',
-        'Professional Tax',
-        'TDS',
+        'Retirement Contribution',
+        'Social Insurance',
+        'Local Payroll Tax',
+        'Withholding Tax',
       ],
       rows,
     ),
@@ -365,8 +369,8 @@ function buildExport(run: PayrollExportRunRow, exportType: PayrollExportType) {
     return buildBankExport(run, lines)
   }
 
-  if (exportType === 'statutory') {
-    return buildStatutoryExport(run, lines)
+  if (exportType === 'deductions') {
+    return buildDeductionsExport(run, lines)
   }
 
   return buildDepartmentCostExport(run, lines)
@@ -407,7 +411,7 @@ export function createPayrollExportRepository(): PayrollExportRepository {
                 full_name,
                 bank_account_holder_name,
                 bank_account_number,
-                bank_ifsc,
+                bank_routing_code,
                 bank_name,
                 departments(name)
               )

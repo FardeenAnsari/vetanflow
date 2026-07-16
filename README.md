@@ -1,197 +1,254 @@
 <p align="center">
-  <img src="docs/readme/hero.svg" alt="Animated VetanFlow payroll operations flow" width="100%" />
+  <img src="docs/readme/hero.svg" alt="VetanFlow payroll operations platform" width="100%" />
 </p>
 
 <h1 align="center">VetanFlow</h1>
 
 <p align="center">
-  India-first payroll operations system built with React, Express, and Supabase.
-  It covers the month-end path from employee setup and attendance locks to payroll approval, payslip delivery, and finance exports.
+  A role-based payroll operations platform built with React, Express, and Supabase.<br />
+  It turns employee setup, time data, approvals, payroll, documents, and exports into one controlled monthly workflow.
 </p>
 
 <p align="center">
-  <img alt="React" src="https://img.shields.io/badge/React-19-0A2947?style=for-the-badge&labelColor=F3E4C9" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-0A2947?style=for-the-badge&labelColor=D3D4C0" />
-  <img alt="Express" src="https://img.shields.io/badge/Express-5-8B5E3C?style=for-the-badge&labelColor=F3E4C9" />
-  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Auth%20%7C%20RLS%20%7C%20Storage-0A2947?style=for-the-badge&labelColor=D3D4C0" />
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-0A2947?style=for-the-badge&logo=react&logoColor=white" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-1D5FD1?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img alt="Express 5" src="https://img.shields.io/badge/Express-5-0A2947?style=for-the-badge&logo=express&logoColor=white" />
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Auth%20%7C%20RLS%20%7C%20Storage-168A58?style=for-the-badge&logo=supabase&logoColor=white" />
 </p>
 
-## The Product
+<p align="center">
+  <a href="#start-here">Start here</a> ·
+  <a href="#the-complete-journey">See the flow</a> ·
+  <a href="#role-workspaces">Role access</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#showcase-data">Run the showcase</a>
+</p>
 
-VetanFlow is a payroll control room for an Indian company. The app treats payroll as an auditable monthly workflow, not a salary calculator on a pretty screen.
+## What VetanFlow Is
 
-It models the pieces a serious HR and finance team expects:
+VetanFlow is a payroll control room for a growing organization. It does not treat payroll as an isolated calculator. It models the full path that makes a payroll result trustworthy:
 
-- employees, departments, locations, salary history, bank readiness, and private ID photos
-- role-aware workspaces for owner, admin, HR, finance, manager, and employee users
-- employee self-service with digital ID card, leave requests, and payslip archive
-- leave review, escalation metadata, attendance entries, holidays, and locked payroll months
-- payroll runs generated only from locked attendance months
-- earnings, deductions, reimbursements, overtime, LOP, PF, ESI, PT, and TDS-ready snapshots
-- maker-checker approval so the payroll maker cannot approve or finalize the same run
-- immutable finalized payroll runs, generated payslip PDFs, signed downloads, and CSV exports
+- controlled user access and organization membership
+- employee records, reporting lines, salary history, and payout readiness
+- leave requests, manager/HR decisions, attendance, holidays, and month locks
+- payroll calculation snapshots, adjustments, overtime, loss of pay, and variance warnings
+- maker-checker approval, finalized-run immutability, and audit history
+- private payslip PDFs, short-lived signed downloads, and finance exports
+- different navigation, data visibility, and actions for every operational role
+
+## Product Surfaces
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Public product landing page with real workspace previews |
+| `/tour` | Animated, pausable employee-to-payslip walkthrough |
+| `/how-it-works` | Product architecture, control model, and role flow |
+| `/blog` | Product and payroll operations articles |
+| `/terms` | Evaluation Terms of Service |
+| `/privacy` | Privacy and data-handling summary |
+| `/licenses` | Free evaluation terms and third-party open-source notices |
+| `/login` | Sign-in plus explicit switching when a Supabase session already exists |
+| `/app` | Authenticated VetanFlow workspace |
+
+The public site and secure workspace share one React application. `/login` owns account entry and switching; `/app` loads authenticated product workflows.
+
+## The Complete Journey
+
+<p align="center">
+  <img src="docs/readme/payroll-journey.svg" alt="Seven-stage VetanFlow journey from access creation to payslip delivery" width="100%" />
+</p>
+
+### 1. Create the organization member
+
+An owner or permitted administrator invites a person. Supabase Auth owns the identity; `profiles` links that identity to one organization; `user_roles` gives it a scoped application role. The service-role key never enters the browser.
+
+### 2. Create the employee record
+
+HR creates the employee, selects department and work location, assigns a reporting manager, records compensation history, and adds payout details. An employee can be linked to an Auth profile without exposing compensation or bank fields through the direct Data API.
+
+### 3. Capture leave and attendance
+
+Employees request and cancel their own leave. Managers act on direct-report requests and can escalate cases to HR. HR maintains attendance, holidays, half days, absences, overtime, and the payroll-impact summary.
+
+### 4. Lock the source month
+
+The attendance month is locked before payroll begins. A database trigger rejects later attendance or holiday changes for that period, preventing source data from drifting after calculation.
+
+### 5. Calculate payroll
+
+Finance creates a run only from a locked month. VetanFlow calculates every active employee line, stores an immutable calculation snapshot, applies adjustments, and flags material changes against the previous run.
+
+### 6. Review, approve, and finalize
+
+The maker submits the draft. A different authorized operator must approve and finalize it. The backend enforces maker-checker separation, while Postgres triggers prevent edits to finalized runs, lines, and adjustments.
+
+### 7. Publish private outputs
+
+The backend generates one PDF per payroll line and uploads it to a private Supabase Storage bucket. Employees list only their own published payslips and receive a short-lived signed URL after an authorization check. Finance can also create bank, deductions, and department-cost CSV exports.
+
+## Role Workspaces
+
+VetanFlow has six application roles. They are not the same screen with disabled buttons; navigation, priorities, data scope, and action surfaces change with the job.
+
+| Role | Primary workspace | Data scope | Key actions |
+| --- | --- | --- | --- |
+| Owner | organization command center | entire organization | access, settings, HR, payroll, approvals, exports |
+| Admin | platform operations | entire organization | member operations, HR setup, workflow administration |
+| HR | people operations | entire organization | employees, compensation history, leave, attendance, locks |
+| Finance | payroll control | payroll-wide plus limited employee readiness | calculate, adjust, submit, approve/finalize, payslips, exports |
+| Manager | team operations | self plus direct reports | team attendance, leave decisions, escalation, own payslips |
+| Employee | personal self-service | own employee record | digital ID, leave request/history, own payslip archive |
+
+`owner` is the highest organization role. VetanFlow deliberately has no hidden global superadmin in the application data model.
 
 ## Screenshots
 
-| Owner payroll review | Employee self-service |
+| Owner workspace | Employee self-service |
 | --- | --- |
-| ![Owner payroll review](docs/screenshots/owner-desktop.png) | ![Employee self-service](docs/screenshots/employee-desktop.png) |
+| ![Owner workspace](docs/screenshots/owner-desktop.png) | ![Employee self-service](docs/screenshots/employee-desktop.png) |
 
-| Sign in | Mobile employee view |
+| Sign in | Mobile employee page |
 | --- | --- |
-| ![Sign in screen](docs/screenshots/sign-in-desktop.png) | ![Employee mobile view](docs/screenshots/employee-mobile.png) |
-
-## System In One View
-
-```mermaid
-flowchart LR
-  user["User session<br/>Supabase Auth"] --> frontend["React workspace<br/>role-aware UI"]
-  frontend --> api["Express API<br/>validation + domain rules"]
-  api --> rls["Supabase Postgres<br/>RLS policies"]
-  api --> storage["Supabase Storage<br/>private photos + payslips"]
-  rls --> payroll["Payroll engine<br/>snapshots + approvals"]
-  payroll --> docs["Payslips<br/>signed URLs"]
-  payroll --> exports["Bank, statutory,<br/>department cost CSV"]
-
-  classDef core fill:#0A2947,color:#F3E4C9,stroke:#0A2947;
-  classDef soft fill:#F3E4C9,color:#0A2947,stroke:#D3D4C0;
-  classDef accent fill:#8B5E3C,color:#F3E4C9,stroke:#8B5E3C;
-  class user,frontend soft;
-  class api,payroll core;
-  class rls,storage,docs,exports accent;
-```
-
-## Payroll Lifecycle
-
-```mermaid
-stateDiagram-v2
-  [*] --> HRSetup: create employee + salary history
-  HRSetup --> LeaveAttendance: leave + attendance capture
-  LeaveAttendance --> AttendanceLocked: lock payroll month
-  AttendanceLocked --> DraftRun: generate payroll run
-  DraftRun --> Reviewing: submit
-  Reviewing --> Approved: checker approves
-  Approved --> Finalized: checker finalizes
-  Finalized --> Payslips: generate PDFs
-  Finalized --> Exports: bank/statutory/cost CSVs
-  Payslips --> [*]
-  Exports --> [*]
-```
+| ![Sign in](docs/screenshots/sign-in-desktop.png) | ![Mobile employee page](docs/screenshots/employee-mobile.png) |
 
 ## Feature Map
 
-| Area | What exists |
+| Domain | Implemented capability |
 | --- | --- |
-| Auth and roles | Supabase Auth, backend Bearer-token verification, server-side role lookup, owner/admin/HR/finance/manager/employee permissions |
-| HR master data | employees, departments, work locations, salary revisions, audit logs, archive/edit flows, employee photos |
-| Employee page | self-service profile, digital ID card, leave request form, leave history, payslip archive, signed downloads |
-| Leave | employee request/cancel, manager/admin/HR queue, approve/reject/escalate actions, decision metadata |
-| Attendance | attendance statuses, holidays, half-day LOP, overtime hours, payroll-impact summary, month lock/unlock |
-| Payroll | locked-month run creation, recalculation, adjustments, variance warnings, maker-checker submit/approve/finalize |
-| Documents | private payslip PDF generation, private Supabase Storage, signed URL download after RLS-backed access check |
-| Exports | bank payout CSV, statutory summary CSV, department cost CSV |
-| Automation | demo reset, demo readiness checks, authenticated screenshot capture, CI, deployment preflight, Graphify knowledge graph |
+| Identity | Supabase Auth, Bearer-token verification, profiles, organization roles, invitation hierarchy |
+| HR master data | employees, departments, locations, manager chains, salary revisions, private photos, archive/edit flows |
+| Employee experience | distinct self-service workspace, digital ID, authorized two-sided ID PDF, leave, payslip archive, signed downloads |
+| Leave | employee request/cancel, manager queue, approve/reject, HR escalation, decision metadata |
+| Attendance | statuses, holidays, overtime, half-day/absence impact, summary, lock/unlock controls |
+| Payroll | locked-month generation, snapshots, adjustments, variance, maker-checker, finalization guards |
+| Documents | server-generated PDFs, private Storage, published records, signed URL delivery |
+| Finance outputs | payout CSV, deductions CSV, department-cost CSV |
+| Public product site | landing, tour, architecture, articles, Terms, Privacy, evaluation and OSS notices |
+| Automation | 12-account cloud seed, six-month payroll bootstrap, readiness checks, role-login checks, screenshots, CI, deployment preflight |
 
 ## Architecture
 
-```txt
-frontend/      React + Vite workspace, role surfaces, payroll UI, self-service UI
-backend/       Express API, domain modules, validation, payroll engine, tests
-supabase/      SQL migrations, RLS policies, storage buckets, demo seed
-scripts/       demo reset/check, screenshot capture, deployment readiness
-docs/          architecture, phases, walkthrough, handoff, deployment notes
-graphify-out/  local knowledge graph for project navigation
+```mermaid
+flowchart LR
+  visitor["Public visitor"] --> publicSite["React public site"]
+  member["Signed-in member"] --> workspace["Role-shaped React workspace"]
+  workspace -->|Bearer token| api["Express API"]
+  api --> auth["Supabase Auth verification"]
+  api --> domain["Domain rules + validation"]
+  domain --> userDb["User-scoped Supabase client"]
+  domain --> guardedService["Guarded service client"]
+  userDb --> postgres["Postgres + RLS"]
+  guardedService --> postgres
+  guardedService --> storage["Private Storage"]
+  postgres --> audit["Audit + immutable snapshots"]
+  storage --> signed["Short-lived signed URL"]
 ```
 
-The frontend does not own sensitive payroll decisions. It renders workflows and sends authenticated requests. The backend validates input, applies payroll rules, creates documents, and uses Supabase clients with the right privilege boundary. Supabase stores data, enforces RLS, handles Auth, and keeps private files out of public URLs.
+### Responsibility boundaries
 
-## Security Shape
+```txt
+frontend/      React 19 + Vite, public product site, role workspaces, interaction state
+backend/       Express 5 API, Auth context, repositories, payroll engine, PDF/CSV services
+supabase/      Postgres schema, RLS, grants, triggers, private buckets, repeatable master seed
+scripts/       cloud showcase provisioning, payroll bootstrap, login/readiness checks, screenshots
+docs/          architecture, phases, walkthroughs, deployment, living handoff
+graphify-out/  generated local code knowledge graph
+```
+
+The frontend never decides who may approve a run or which payslip a user may download. It can hide unavailable controls for usability, but the backend and database remain the authority.
+
+## Security Model
 
 ```mermaid
 flowchart TB
-  browser["Browser<br/>publishable key only"] --> token["Auth token"]
-  token --> backend["Express backend<br/>verifies user"]
-  backend --> userClient["User-scoped Supabase client<br/>RLS reads"]
-  backend --> serviceClient["Service-role Supabase client<br/>guarded writes only"]
-  userClient --> db["Postgres + RLS"]
-  serviceClient --> db
-  serviceClient --> privateStorage["Private Storage buckets"]
-
-  classDef public fill:#F3E4C9,color:#0A2947,stroke:#D3D4C0;
-  classDef server fill:#0A2947,color:#F3E4C9,stroke:#0A2947;
-  classDef data fill:#8B5E3C,color:#F3E4C9,stroke:#8B5E3C;
-  class browser,token public;
-  class backend,userClient,serviceClient server;
-  class db,privateStorage data;
+  browser["Browser\npublishable key only"] --> token["Supabase access token"]
+  token --> backend["Express Auth context"]
+  backend --> role["Organization + role lookup"]
+  role --> route["Route permission"]
+  route --> rls["RLS-scoped read"]
+  route --> guarded["Validated service write"]
+  rls --> data["Organization data"]
+  guarded --> data
+  guarded --> files["Private files"]
 ```
 
-Key rules:
+Controls already present:
 
-- service role key belongs only in `backend/.env`
-- frontend env uses only publishable Supabase keys
-- role assignment happens through backend-controlled invitation/admin paths
-- employees can see their own employee and payslip data
-- owner/admin/HR/finance users can operate within their role boundary
-- finalized payroll records reject later mutation through database trigger protection
+- service role key is backend-only and ignored by Git
+- frontend contains only the publishable key
+- all public tables use RLS and explicit grants
+- sensitive compensation and payout columns are not directly granted to ordinary authenticated clients
+- roles are organization-scoped and resolved server-side
+- employees and managers have row-level visibility boundaries
+- payroll requires a locked source month
+- maker and checker must be different users
+- finalized payroll data rejects mutation at the database layer
+- payslips and employee photos use private Storage buckets
+- signed payslip links are issued only after an access check
+- seed credentials are written to ignored local storage with mode `0600`
+- account switching clears only the local browser session before a different user signs in
+- owner can export any organization employee ID; employees receive `404` for cross-record ID requests
+- API input and route identifiers are validated with Zod
+- Helmet, payload limits, restricted CORS, and API/invitation rate limits are active
+- Sentry browser/server capture remains opt-in through deployment DSNs and does not enable default PII collection
 
-## Data Model, Condensed
+No software can honestly promise zero vulnerabilities. This project uses layered controls and automated checks; a real commercial launch should still include independent penetration testing, privacy/legal review, production secret rotation, backups, monitoring, and an incident-response process.
+
+## Data Model
 
 ```mermaid
 erDiagram
-  organizations ||--o{ employees : owns
+  organizations ||--o{ profiles : contains
+  organizations ||--o{ user_roles : grants
+  organizations ||--o{ employees : employs
   organizations ||--o{ departments : owns
   organizations ||--o{ work_locations : owns
-  employees ||--o{ salary_revisions : has
+  employees ||--o{ salary_revisions : records
   employees ||--o{ leave_requests : requests
-  employees ||--o{ attendance_entries : records
+  employees ||--o{ attendance_entries : receives
   attendance_month_locks ||--o{ payroll_runs : sources
   payroll_runs ||--o{ payroll_run_lines : contains
   payroll_runs ||--o{ payroll_adjustments : applies
-  payroll_run_lines ||--o{ payslips : publishes
+  payroll_run_lines ||--o| payslips : publishes
 ```
 
-## India-First Payroll Logic
+## Start Here
 
-The payroll calculation is built to show real payroll thinking without pretending to replace a statutory compliance product.
+### Prerequisites
 
-It currently handles:
+- Node.js 22 or newer; `.nvmrc` targets Node 24
+- npm
+- a Supabase Cloud project
+- Supabase CLI for schema linking/push
 
-- fixed gross and CTC-derived salary snapshots
-- payable days, loss of pay, half-day impact, and overtime pay
-- earnings, deductions, reimbursements, pre-tax and post-tax adjustments
-- employee PF, ESI, professional tax, and TDS-ready fields
-- previous-run variance warnings
-- immutable finalized snapshots for auditability
-
-Core files:
-
-- [backend/src/modules/payroll/calculate-payroll.ts](backend/src/modules/payroll/calculate-payroll.ts)
-- [backend/src/modules/payroll/payroll-run-repository.ts](backend/src/modules/payroll/payroll-run-repository.ts)
-- [backend/src/modules/payroll/payslip-service.ts](backend/src/modules/payroll/payslip-service.ts)
-- [backend/src/modules/payroll/payroll-export-service.ts](backend/src/modules/payroll/payroll-export-service.ts)
-
-## Run Locally
-
-Use Node 22 or newer. The repo includes `.nvmrc` targeting Node 24.
+### 1. Install and configure
 
 ```sh
 npm install
 cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
-npm run dev:backend
-npm run dev:frontend
 ```
 
-Local URLs:
+Backend-only:
 
-- frontend: `http://127.0.0.1:5173/`
-- backend health: `http://localhost:4000/health`
+```txt
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY
+CORS_ORIGIN
+```
 
-Fill the Supabase values in both env files before using authenticated flows. Keep `SUPABASE_SERVICE_ROLE_KEY` only in `backend/.env`.
+Frontend-safe:
 
-## Supabase Setup
+```txt
+VITE_API_BASE_URL
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+```
 
-The project expects a fresh Supabase Cloud project with Data API enabled and automatic RLS enabled.
+Never place `SUPABASE_SERVICE_ROLE_KEY` in `frontend/.env`, a `VITE_*` variable, source code, screenshots, or documentation.
+
+### 2. Link the database
 
 ```sh
 npm run supabase:link -- --project-ref <project-ref>
@@ -199,118 +256,142 @@ npm run supabase:push
 npm run supabase:types
 ```
 
-Useful docs:
-
-- [Supabase cloud setup](docs/SUPABASE_CLOUD_SETUP.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Deployment](docs/DEPLOYMENT.md)
-
-## Demo Flow
-
-The demo automation rebuilds a clean September 2026 payroll month with three active employees, locked attendance, one finalized payroll run, run lines, and payslips.
+### 3. Build the complete showcase
 
 ```sh
-npm run demo:reset
-npm run demo:check
-npm run screenshots:capture-authenticated
+npm run demo:bootstrap
 ```
 
-Demo reading path:
+The bootstrap is repeatable. It creates or updates 12 role accounts, seeds the organization and operational records, prepares the previous six closed payroll months, generates payslips, then checks readiness and every login.
+
+On first run, it requests the owner password without echoing it. Role credentials are saved only to:
+
+```txt
+.tmp/demo-credentials.json
+```
+
+That file is Git-ignored and written with local owner-only permissions. Do not use these showcase credentials in a public production environment.
+
+### 4. Run the product
+
+```sh
+npm run dev
+```
+
+- public site: `http://localhost:5173/`
+- sign in/account switcher: `http://localhost:5173/login`
+- secure workspace: `http://localhost:5173/app`
+- API health: `http://localhost:4000/health`
+
+Vite selects the next free port when `5173` is already in use. Add that origin to backend `CORS_ORIGIN` when testing authenticated API calls from the alternate port.
+
+## Showcase Data
+
+The live-ready showcase contains:
+
+- 1 organization with global locale, currency, country, and timezone preferences
+- 12 linked Auth users: 1 owner, 2 admins, 2 HR, 2 finance, 2 managers, 3 employees
+- 10 employees across 5 departments and 4 locations
+- active, leave, exit-pending, and draft employee states
+- reporting lines for leadership and manager direct reports
+- payout-ready employees and compensation revision history
+- pending, escalated, approved, rejected, and cancelled leave examples
+- current attendance with present, half-day, absent, and overtime examples
+- six historical locked payroll months
+- 216 attendance entries, 18 payroll adjustments, 54 finalized payroll lines, and 54 published payslips
+- seeded audit events and organization preferences
+
+Useful commands:
+
+```sh
+npm run demo:seed-showcase   # Auth users + operational foundation
+npm run demo:prepare         # previous calendar month by default
+npm run demo:check           # 15 readiness assertions
+npm run demo:check-logins    # signs in every role and verifies API visibility
+npm run demo:bootstrap       # all of the above plus six historical months
+```
+
+## How To Demonstrate The Product
+
+1. Open `/` and use the product tour to establish the workflow.
+2. Sign in as owner and show organization health, people readiness, access controls, and any-employee ID PDF authority.
+3. Switch to HR and show employee master data, salary history, leave, attendance, and locking.
+4. Switch to manager and show the reduced direct-report scope and leave queue.
+5. Switch to finance and open the older run for variance, then the latest finalized run and exports.
+6. Switch to employee and show the personal digital ID, leave history, and private payslip download.
+7. Explain that UI permissions improve usability, while API checks, RLS, grants, and triggers enforce security.
+
+Detailed scripts:
 
 1. [Demo walkthrough](docs/DEMO_WALKTHROUGH.md)
 2. [Recorded demo script](docs/RECORDED_DEMO_SCRIPT.md)
 3. [Demo reset checklist](docs/DEMO_RESET_CHECKLIST.md)
 4. [Screenshot guide](docs/SCREENSHOT_GUIDE.md)
-5. [Screenshot manifest](docs/SCREENSHOT_MANIFEST.md)
+5. [Deployment guide](docs/DEPLOYMENT.md)
 
 ## Quality Gates
 
 ```sh
 npm run verify
 npm run deploy:check
+npm run demo:check
+npm run demo:check-logins
 ```
 
-`npm run verify` runs lint, typecheck, backend tests, frontend build, and backend build.
+`npm run verify` runs frontend and backend linting, strict typechecks, backend tests, and production builds. CI runs the same core checks through GitHub Actions.
 
-Current local verification baseline:
-
-- backend test files: `5 passed`
-- backend tests: `53 passed`
-- deployment readiness: passes, with a warning until a GitHub remote is connected
-- Vite build: passes, with a non-fatal large chunk warning
+Current Phase 9 baseline: 7 test files and 62 tests, 15/15 live readiness checks, 12/12 account checks, zero npm audit vulnerabilities, and no Supabase schema lint errors.
 
 ## Deployment Shape
 
-The repo is prepared for:
+| Layer | Target |
+| --- | --- |
+| Frontend/API | preferred same-origin Vercel deployment using `api/[...path].ts` |
+| Backend alternative | Render-compatible Node service through `render.yaml` |
+| Data | Supabase Cloud Postgres, Auth, RLS, and Storage |
+| CI | GitHub Actions |
 
-- Supabase Cloud for Postgres, Auth, RLS, and Storage
-- Render-style backend deployment through [render.yaml](render.yaml)
-- Vercel-style frontend deployment through [vercel.json](vercel.json)
-- GitHub Actions CI through [.github/workflows/ci.yml](.github/workflows/ci.yml)
-
-Production env split:
-
-```txt
-backend:
-  SUPABASE_URL
-  SUPABASE_PUBLISHABLE_KEY
-  SUPABASE_SERVICE_ROLE_KEY
-  CORS_ORIGIN
-
-frontend:
-  VITE_API_BASE_URL
-  VITE_SUPABASE_URL
-  VITE_SUPABASE_PUBLISHABLE_KEY
-```
+Production launch work still includes custom domains, monitored email delivery, secret rotation, rate-limit tuning, backups, observability, legal documents for the operating company, and independent security review.
 
 ## Phase Story
 
 | Phase | Status | Result |
 | --- | --- | --- |
-| 0 | Complete | monorepo, React app, Express API, Supabase schema, tests, CI, docs |
-| 1 | Complete | Supabase Cloud, Auth, RLS, role-aware backend access |
-| 2 | Complete | HR master data, salary history, photos, digital ID cards, employee page |
-| 3 | Complete | leave workflow, attendance, holidays, payroll month locks |
-| 4 | Complete | payroll runs, adjustments, variance warnings, maker-checker, immutability |
-| 5 | Complete | payslip PDFs, employee archive, signed downloads, bank/statutory/cost exports |
-| 6 | Complete | demo reset, screenshots, CI/deployment prep, walkthrough docs |
+| 0 | Complete | React/Express/Supabase foundation, tests, CI, docs |
+| 1 | Complete | cloud database, Auth, RLS, role-aware API |
+| 2 | Complete | HR master data, compensation, photos, digital ID, self-service |
+| 3 | Complete | leave workflow, attendance, holidays, period locks |
+| 4 | Complete | payroll engine, adjustments, variance, maker-checker, immutability |
+| 5 | Complete | payslip PDFs, private delivery, bank/deduction/cost exports |
+| 6 | Complete | demo reset, screenshots, deployment preparation |
+| 7 | Complete | global terminology, role-specific UX, settings, access hierarchy, hardening |
+| 8 | Complete | public product site, animated tour, full showcase data, role accounts, study flow |
+| 9 | Complete | account switching, owner ID authority, six-month data, settings controls, Sentry, branding, hardening, documentation |
 
-Detailed tracker: [docs/PHASES.md](docs/PHASES.md)
+Full tracker: [docs/PHASES.md](docs/PHASES.md)
 
 ## Study Path
 
-Read the project in this order:
+Read in this order:
 
-1. [docs/PHASES.md](docs/PHASES.md) for what has shipped
-2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the runtime and security model
-3. [docs/HANDOFF.md](docs/HANDOFF.md) for the living implementation map
-4. [supabase/migrations](supabase/migrations) for schema and RLS evolution
-5. [backend/src/modules/payroll](backend/src/modules/payroll) for the payroll domain
-6. [frontend/src/App.tsx](frontend/src/App.tsx) for the current product surface
+1. This README for product intent and the full journey.
+2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for runtime and trust boundaries.
+3. [docs/AI_TAKEOVER.md](docs/AI_TAKEOVER.md) for the exact current resume point and non-negotiable rules.
+4. [docs/HANDOFF.md](docs/HANDOFF.md) for the concise current implementation state and next target.
+5. [supabase/migrations](supabase/migrations) for schema, grants, RLS, and trigger evolution.
+6. [backend/src/modules/payroll](backend/src/modules/payroll) for payroll calculation and document generation.
+7. [backend/src/modules/auth](backend/src/modules/auth) for identity and role resolution.
+8. [frontend/src/public-site](frontend/src/public-site) for the public product experience.
+9. [frontend/src/App.tsx](frontend/src/App.tsx) for the authenticated workspace.
+10. [scripts/seed-showcase-data.ts](scripts/seed-showcase-data.ts) and [scripts/bootstrap-showcase.mjs](scripts/bootstrap-showcase.mjs) for live automation.
 
-## Command Sheet
+## Licensing
 
-```sh
-npm run verify
-npm run deploy:check
-npm run demo:reset
-npm run demo:prepare
-npm run demo:check
-npm run screenshots:capture
-npm run screenshots:capture-authenticated
-npm run handoff:update
-npm run graphify:update
-```
+The repository does not currently grant a general open-source license for VetanFlow itself. The public `/licenses` page documents evaluation terms and the licenses of included third-party packages. Add a reviewed commercial or source license before distributing the product beyond private evaluation.
 
-## Current Status
+---
 
-VetanFlow is complete through the local review and demo milestone. The codebase has a clean first commit, full local verification, demo data automation, deployment config, and a project knowledge graph.
-
-Next production steps:
-
-1. Re-authenticate GitHub CLI.
-2. Create and push the GitHub repo.
-3. Connect frontend deployment.
-4. Connect backend deployment.
-5. Add production env vars.
-6. Run the live smoke test from [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+<p align="center">
+  <strong>VetanFlow</strong><br />
+  People data in. Controlled payroll out.
+</p>

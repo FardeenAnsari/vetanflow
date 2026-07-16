@@ -7,11 +7,10 @@ Use screenshots to show the product as a working payroll system, not a static mo
 Start the app:
 
 ```sh
-npm run dev:backend
-npm run dev:frontend
+npm run dev
 ```
 
-Capture the public sign-in screen:
+Capture the public sign-in screen at `/login`:
 
 ```sh
 npm run screenshots:capture
@@ -34,7 +33,7 @@ Authenticated screenshots can be captured without manual browser work:
 npm run screenshots:capture-authenticated
 ```
 
-The script uses `backend/.env` for the Supabase service role key, creates or updates dedicated demo auth users, signs them in with the public key, injects the sessions into a temporary headless Chrome profile, and writes:
+The script reads the existing owner and employee credentials from the ignored `.tmp/demo-credentials.json` file, validates their expected roles and payslip access without mutating Auth or role assignments, signs them in with the publishable key, injects the sessions into a temporary headless Chrome profile, and writes:
 
 ```txt
 docs/screenshots/owner-desktop.png
@@ -43,7 +42,7 @@ docs/screenshots/employee-desktop.png
 docs/screenshots/employee-mobile.png
 ```
 
-Set `DEMO_AUTH_PASSWORD`, `DEMO_OWNER_EMAIL`, or `DEMO_EMPLOYEE_EMAIL` only when you need repeatable local credentials. Do not commit those values.
+Run `npm run demo:bootstrap` first. `DEMO_OWNER_EMAIL`, `DEMO_OWNER_PASSWORD`, `DEMO_EMPLOYEE_EMAIL`, and `DEMO_EMPLOYEE_PASSWORD` can override the local credential file for a temporary capture. Do not commit those values.
 
 ### Manual Fallback
 
@@ -58,7 +57,7 @@ Manual authenticated screenshots need a browser profile that is already signed i
 2. Sign in with the owner/admin demo account in the owner window.
 3. Sign in with the employee demo account in the employee window.
 4. Close both Chrome windows so headless Chrome can reuse those profiles.
-5. Capture the signed-in root screens:
+5. Capture the signed-in `/app` screens:
 
    ```sh
    CHROME_USER_DATA_DIR="$PWD/.tmp/chrome-owner" DEMO_SCREENSHOT_PREFIX=owner DEMO_SCREENSHOT_EXPECT_TEXT="Payroll runs" npm run screenshots:capture
@@ -79,6 +78,8 @@ Track progress in `docs/SCREENSHOT_MANIFEST.md`.
 - `payroll-run-detail.png`: finalized run with payslip/export controls.
 - `attendance-lock.png`: Attendance control showing locked month state.
 - `payslip-archive.png`: employee payslip archive with download action.
+- `employee-id-print.png`: owner-triggered ID-card print/ribbon animation.
+- `organization-preferences.png`: constrained country/currency/locale/timezone selectors and live previews.
 
 ## Capture Notes
 

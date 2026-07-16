@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { spawn } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -8,10 +7,10 @@ import { join, resolve } from 'node:path'
 import WebSocket from 'ws'
 
 const root = process.cwd()
-const appUrl = process.env.DEMO_APP_URL ?? 'http://127.0.0.1:5173/'
+const appUrl = process.env.DEMO_APP_URL ?? 'http://127.0.0.1:5173/app'
 const outputDir = resolve(root, process.env.DEMO_SCREENSHOT_DIR ?? 'docs/screenshots')
 const timeoutMs = Number(process.env.DEMO_SCREENSHOT_TIMEOUT_MS ?? 30_000)
-const demoPassword = process.env.DEMO_AUTH_PASSWORD ?? `${randomBytes(18).toString('base64url')}Aa1!`
+const credentialPath = join(root, '.tmp/demo-credentials.json')
 
 const viewports = [
   { label: 'desktop', width: 1440, height: 1000, mobile: false },
@@ -53,6 +52,11 @@ function normalizePeriodMonth(value) {
   }
 
   return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-01`
+}
+
+function getDefaultDemoPeriodMonth() {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 10)
 }
 
 function getMonthBounds(month) {
@@ -255,6 +259,7 @@ async function stopBrowser(process) {
 
 async function waitForText(cdp, text, label) {
   const startedAt = Date.now()
+  let lastBodyText = ''
 
   while (Date.now() - startedAt < timeoutMs) {
     const response = await cdp.send('Runtime.evaluate', {
@@ -262,6 +267,7 @@ async function waitForText(cdp, text, label) {
       returnByValue: true,
     })
     const bodyText = response.result?.value ?? ''
+    lastBodyText = bodyText
 
     if (bodyText.includes(text)) {
       return
@@ -270,7 +276,9 @@ async function waitForText(cdp, text, label) {
     await delay(500)
   }
 
-  throw new Error(`Expected text "${text}" was not found for ${label}.`)
+  throw new Error(
+    `Expected text "${text}" was not found for ${label}. Visible page text: ${JSON.stringify(lastBodyText.slice(0, 500))}`,
+  )
 }
 
 async function query(label, request) {
@@ -283,95 +291,40 @@ async function query(label, request) {
   return data
 }
 
-async function findAuthUserByEmail(supabase, email) {
-  let page = 1
-
-  while (page <= 10) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 100 })
-
-    if (error) {
-      throw new Error(`auth listUsers: ${error.message}`)
-    }
-
-    const user = data.users.find((candidate) => candidate.email?.toLowerCase() === email.toLowerCase())
-
-    if (user) {
-      return user
-    }
-
-    if (data.users.length < 100) {
-      return null
-    }
-
-    page += 1
-  }
-
-  return null
-}
-
-async function ensureAuthUser(supabase, { email, fullName }) {
-  const existing = await findAuthUserByEmail(supabase, email)
-
-  if (existing) {
-    const { data, error } = await supabase.auth.admin.updateUserById(existing.id, {
-      email_confirm: true,
-      password: demoPassword,
-      user_metadata: { full_name: fullName },
-    })
-
-    if (error) {
-      throw new Error(`auth update ${email}: ${error.message}`)
-    }
-
-    return data.user
-  }
-
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    password: demoPassword,
-    user_metadata: { full_name: fullName },
-  })
-
-  if (error) {
-    throw new Error(`auth create ${email}: ${error.message}`)
-  }
-
-  return data.user
-}
-
-async function ensureDemoAccess(serviceClient, ownerUser, employeeUser) {
-  const period = getMonthBounds(normalizePeriodMonth(process.env.DEMO_PERIOD_MONTH ?? '2026-09-01'))
-  const organizations = await query(
-    'organizations',
-    serviceClient.from('organizations').select('id,name').order('created_at', { ascending: true }).limit(1),
+async function validateDemoAccess(serviceClient, ownerUserId, employeeUserId) {
+  const period = getMonthBounds(
+    normalizePeriodMonth(process.env.DEMO_PERIOD_MONTH ?? getDefaultDemoPeriodMonth()),
   )
-  const organization = organizations[0]
-
-  if (!organization) {
-    throw new Error('No organization found. Run npm run demo:prepare first.')
-  }
-
-  await query(
+  const ownerProfiles = await query(
     'owner profile',
-    serviceClient.from('profiles').upsert(
-      {
-        email: ownerUser.email,
-        full_name: 'Demo Owner',
-        id: ownerUser.id,
-        organization_id: organization.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
-    ),
+    serviceClient.from('profiles').select('organization_id').eq('id', ownerUserId).limit(1),
   )
+  const ownerProfile = ownerProfiles[0]
+
+  if (!ownerProfile) {
+    throw new Error('The owner account is not linked to an organization. Run npm run demo:seed-showcase first.')
+  }
+
+  const ownerRoles = await query(
+    'owner role',
+    serviceClient
+      .from('user_roles')
+      .select('role')
+      .eq('organization_id', ownerProfile.organization_id)
+      .eq('user_id', ownerUserId)
+      .eq('role', 'owner'),
+  )
+
+  if (!ownerRoles.length) {
+    throw new Error('The screenshot owner account does not have the owner role.')
+  }
 
   const latestRuns = await query(
     'demo finalized payroll run',
     serviceClient
       .from('payroll_runs')
       .select('id')
-      .eq('organization_id', organization.id)
+      .eq('organization_id', ownerProfile.organization_id)
       .eq('status', 'finalized')
       .eq('period_start', period.startDate)
       .eq('period_end', period.endDate)
@@ -383,101 +336,54 @@ async function ensureDemoAccess(serviceClient, ownerUser, employeeUser) {
     throw new Error(`No finalized payroll run found for ${period.startDate} to ${period.endDate}. Run npm run demo:prepare first.`)
   }
 
-  const lines = await query(
-    'payroll lines',
-    serviceClient
-      .from('payroll_run_lines')
-      .select('id,employee_id')
-      .eq('payroll_run_id', demoRun.id)
-      .order('created_at', { ascending: true })
-  )
-
-  if (!lines.length) {
-    throw new Error('No payroll line found for the latest finalized run.')
-  }
-
-  const payslips = await query(
-    'published payslips',
-    serviceClient
-      .from('payslips')
-      .select('payroll_run_line_id')
-      .in(
-        'payroll_run_line_id',
-        lines.map((line) => line.id),
-      )
-      .not('published_at', 'is', null),
-  )
-  const payslipLineIds = new Set(payslips.map((payslip) => payslip.payroll_run_line_id))
-  const line = lines.find((candidate) => payslipLineIds.has(candidate.id))
-
-  if (!line) {
-    throw new Error(`No published payslip found for ${period.startDate} to ${period.endDate}. Run npm run demo:prepare first.`)
-  }
-
   const employees = await query(
     'employee for demo account',
     serviceClient
       .from('employees')
       .select('id,full_name')
-      .eq('id', line.employee_id)
-      .eq('organization_id', organization.id)
+      .eq('organization_id', ownerProfile.organization_id)
+      .eq('profile_id', employeeUserId)
       .limit(1),
   )
   const employee = employees[0]
 
   if (!employee) {
-    throw new Error('Could not find the employee attached to the latest payroll line.')
+    throw new Error('The employee demo account is not linked to an employee record.')
   }
 
-  await query(
-    'employee profile',
-    serviceClient.from('profiles').upsert(
-      {
-        email: employeeUser.email,
-        full_name: employee.full_name,
-        id: employeeUser.id,
-        organization_id: organization.id,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
-    ),
-  )
-
-  await query(
-    'employee profile reassignment cleanup',
+  const lines = await query(
+    'employee payroll lines',
     serviceClient
-      .from('employees')
-      .update({ profile_id: null })
-      .eq('organization_id', organization.id)
-      .eq('profile_id', employeeUser.id)
-      .neq('id', employee.id),
+      .from('payroll_run_lines')
+      .select('id')
+      .eq('payroll_run_id', demoRun.id)
+      .eq('employee_id', employee.id),
   )
 
-  await query(
-    'employee profile link',
-    serviceClient.from('employees').update({ profile_id: employeeUser.id, work_email: employeeUser.email }).eq('id', employee.id),
+  if (!lines.length) {
+    throw new Error(`No payroll line found for ${employee.full_name} in ${period.startDate}.`)
+  }
+
+  const payslips = await query(
+    'published employee payslip',
+    serviceClient
+      .from('payslips')
+      .select('id')
+      .in('payroll_run_line_id', lines.map((line) => line.id))
+      .not('published_at', 'is', null),
   )
 
-  const roleRows = [
-    ...['owner', 'hr', 'finance'].map((role) => ({
-      organization_id: organization.id,
-      role,
-      user_id: ownerUser.id,
-    })),
-    {
-      organization_id: organization.id,
-      role: 'employee',
-      user_id: employeeUser.id,
-    },
-  ]
+  if (!payslips.length) {
+    throw new Error(`No published payslip found for ${employee.full_name} in ${period.startDate}.`)
+  }
 
-  await query('demo roles', serviceClient.from('user_roles').upsert(roleRows, { onConflict: 'organization_id,user_id,role' }))
+  return employee.full_name
 }
 
-async function signIn(publicClient, email) {
+async function signIn(publicClient, email, password) {
   const { data, error } = await publicClient.auth.signInWithPassword({
     email,
-    password: demoPassword,
+    password,
   })
 
   if (error || !data.session) {
@@ -564,43 +470,59 @@ const publicClient = createClient(supabaseUrl, publishableKey, {
   ...clientOptions,
 })
 
-const ownerEmail = process.env.DEMO_OWNER_EMAIL ?? 'demo.owner@vetanflow.example.com'
-const employeeEmail = process.env.DEMO_EMPLOYEE_EMAIL ?? 'aarav@example.com'
+if (!existsSync(credentialPath)) {
+  throw new Error('Missing .tmp/demo-credentials.json. Run npm run demo:seed-showcase first.')
+}
+
+const storedCredentials = JSON.parse(readFileSync(credentialPath, 'utf8')).users
+const ownerCredential = storedCredentials.find((credential) => credential.role === 'owner')
+const employeeCredential = storedCredentials.find((credential) => credential.role === 'employee')
+
+if (!ownerCredential || !employeeCredential) {
+  throw new Error('The local demo credential file must contain owner and employee accounts.')
+}
+
+const ownerEmail = process.env.DEMO_OWNER_EMAIL ?? ownerCredential.email
+const employeeEmail = process.env.DEMO_EMPLOYEE_EMAIL ?? employeeCredential.email
+const ownerPassword = process.env.DEMO_OWNER_PASSWORD ?? ownerCredential.password
+const employeePassword = process.env.DEMO_EMPLOYEE_PASSWORD ?? employeeCredential.password
+const periodMonth = normalizePeriodMonth(process.env.DEMO_PERIOD_MONTH ?? getDefaultDemoPeriodMonth())
+const periodOptionValue = periodMonth.slice(0, 7)
 const ownerPayrollView = `
 (() => {
-  const headings = Array.from(document.querySelectorAll('h2, h3'));
-  const target = headings.find((heading) => heading.textContent?.includes('Payroll runs'));
-  target?.scrollIntoView({ block: 'start' });
-  window.scrollBy(0, -88);
-  const periodSelect = Array.from(document.querySelectorAll('select'))
-    .find((select) => Array.from(select.options).some((option) => option.value === '2026-09'));
-  if (periodSelect) {
-    const valueSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
-    valueSetter?.call(periodSelect, '2026-09');
-    periodSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    window.setTimeout(() => {
-      const septemberRun = Array.from(document.querySelectorAll('button'))
-        .find((button) => button.textContent?.includes('01 Sept 2026'));
-      septemberRun?.click();
-      target?.scrollIntoView({ block: 'start' });
-      window.scrollBy(0, -88);
-    }, 300);
-  }
+  window.location.hash = 'payroll';
+  window.setTimeout(() => {
+    const headings = Array.from(document.querySelectorAll('h2, h3'));
+    const target = headings.find((heading) => heading.textContent?.includes('Payroll runs'));
+    target?.scrollIntoView({ block: 'start' });
+    window.scrollBy(0, -88);
+    const periodSelect = Array.from(document.querySelectorAll('select'))
+      .find((select) => Array.from(select.options).some((option) => option.value === '${periodOptionValue}'));
+    if (periodSelect) {
+      const valueSetter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set;
+      valueSetter?.call(periodSelect, '${periodOptionValue}');
+      periodSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      window.setTimeout(() => {
+        const preparedRun = Array.from(document.querySelectorAll('button'))
+          .find((button) => button.textContent?.includes('${periodMonth.slice(0, 4)}'));
+        preparedRun?.click();
+        target?.scrollIntoView({ block: 'start' });
+        window.scrollBy(0, -88);
+      }, 300);
+    }
+  }, 300);
 })()
 `
 
-const ownerUser = await ensureAuthUser(serviceClient, { email: ownerEmail, fullName: 'Demo Owner' })
-const employeeUser = await ensureAuthUser(serviceClient, { email: employeeEmail, fullName: 'Demo Employee' })
-await ensureDemoAccess(serviceClient, ownerUser, employeeUser)
-
-const ownerSession = await signIn(publicClient, ownerEmail)
-const employeeSession = await signIn(publicClient, employeeEmail)
+const ownerSession = await signIn(publicClient, ownerEmail, ownerPassword)
+const employeeSession = await signIn(publicClient, employeeEmail, employeePassword)
+await validateDemoAccess(serviceClient, ownerSession.user.id, employeeSession.user.id)
 
 for (const viewport of viewports) {
   await captureSession({
     browser,
-    expectedText: 'Run history',
-    postPrepareExpectedText: 'Aarav Mehta',
+    expectedText: 'Owner workspace',
+    postPrepareExpectedText: 'Run history',
     preparePage: ownerPayrollView,
     prefix: 'owner',
     session: ownerSession,

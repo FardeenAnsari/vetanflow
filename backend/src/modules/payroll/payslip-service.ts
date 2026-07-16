@@ -1,3 +1,4 @@
+import { env } from '../../config/env.js'
 import { createSupabaseUserClient, getSupabaseServiceClient } from '../../lib/supabase.js'
 import { getUserRoles, hasAnyRole } from '../auth/roles.js'
 import type { AppRole } from '../employees/sample-data.js'
@@ -37,10 +38,10 @@ type PayslipRunLineRow = {
 }
 
 type PayslipOrganizationRow = {
+  currency_code: string
   legal_name: string | null
+  locale: string
   name: string
-  pan: string | null
-  tan: string | null
 }
 
 type PayslipRunRow = {
@@ -168,10 +169,10 @@ export type PayslipPdfInput = {
     totalEarnings: number
   }
   organization: {
+    currencyCode?: string
     legalName: string | null
+    locale?: string
     name: string
-    pan: string | null
-    tan: string | null
   }
   periodEnd: string
   periodStart: string
@@ -208,16 +209,24 @@ function getNestedNumber(value: unknown, path: string[], fallback = 0) {
   return typeof current === 'number' ? current : fallback
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('en-IN', {
+function getDeductionValue(payroll: unknown, key: string) {
+  return getNestedNumber(payroll, ['deductions', key])
+}
+
+function formatDate(value: string, locale = env.payroll.locale) {
+  return new Intl.DateTimeFormat(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
   }).format(new Date(value))
 }
 
-function formatMoney(value: number) {
-  return `INR ${Math.round(value).toLocaleString('en-IN')}`
+function formatMoney(
+  value: number,
+  currencyCode = env.payroll.currencyCode,
+  locale = env.payroll.locale,
+) {
+  return `${currencyCode} ${Math.round(value).toLocaleString(locale)}`
 }
 
 function safePdfText(value: string | number | null | undefined) {
@@ -277,6 +286,10 @@ function buildPdfDocument(content: string) {
 }
 
 export function buildPayslipPdf(input: PayslipPdfInput) {
+  const currencyCode = input.organization.currencyCode ?? env.payroll.currencyCode
+  const locale = input.organization.locale ?? env.payroll.locale
+  const formatPayslipDate = (value: string) => formatDate(value, locale)
+  const formatPayslipMoney = (value: number) => formatMoney(value, currencyCode, locale)
   const payroll = isRecord(input.line.calculationSnapshot) ? input.line.calculationSnapshot.payroll : null
   const attendance = isRecord(input.line.calculationSnapshot) ? input.line.calculationSnapshot.attendance : null
   const earnings = [
@@ -287,17 +300,17 @@ export function buildPayslipPdf(input: PayslipPdfInput) {
   ]
   const deductions = [
     ['Loss of pay', getNestedNumber(payroll, ['deductions', 'unpaidLeave'])],
-    ['Employee PF', getNestedNumber(payroll, ['deductions', 'employeePf'])],
-    ['Employee ESI', getNestedNumber(payroll, ['deductions', 'employeeEsi'])],
-    ['Professional tax', getNestedNumber(payroll, ['deductions', 'professionalTax'])],
+    ['Retirement contribution', getDeductionValue(payroll, 'retirementContribution')],
+    ['Social insurance', getDeductionValue(payroll, 'socialInsurance')],
+    ['Local payroll tax', getDeductionValue(payroll, 'localPayrollTax')],
     ['Pre-tax adjustments', getNestedNumber(payroll, ['deductions', 'preTaxAdjustments'])],
     ['Post-tax adjustments', getNestedNumber(payroll, ['deductions', 'postTaxAdjustments'])],
-    ['TDS', getNestedNumber(payroll, ['deductions', 'tds'])],
+    ['Withholding tax', getDeductionValue(payroll, 'withholdingTax')],
   ]
   const commands = [
     pdfRect(0, 735, 612, 57, '0.039 0.161 0.278'),
     pdfLine(40, 760, 'VetanFlow Payslip', { bold: true, color: '1 1 1', size: 18 }),
-    pdfLine(40, 742, `${formatDate(input.periodStart)} to ${formatDate(input.periodEnd)}`, {
+    pdfLine(40, 742, `${formatPayslipDate(input.periodStart)} to ${formatPayslipDate(input.periodEnd)}`, {
       color: '1 1 1',
       size: 10,
     }),
@@ -306,48 +319,48 @@ export function buildPayslipPdf(input: PayslipPdfInput) {
       color: '1 1 1',
       size: 11,
     }),
-    pdfLine(405, 744, `PAN ${input.organization.pan ?? 'NA'}  TAN ${input.organization.tan ?? 'NA'}`, {
+    pdfLine(405, 744, 'Confidential payroll statement', {
       color: '1 1 1',
       size: 9,
     }),
     pdfLine(40, 700, input.employee.name, { bold: true, size: 16 }),
     pdfLine(40, 682, `${input.employee.code} - ${input.employee.designation}`, { size: 10 }),
     pdfLine(40, 666, input.employee.email ?? 'No work email', { size: 10 }),
-    pdfRect(370, 658, 190, 54, '0.952 0.894 0.788'),
+    pdfRect(370, 658, 190, 54, '0.918 0.945 1'),
     pdfStrokeRect(370, 658, 190, 54),
     pdfLine(388, 691, 'Net Pay', { bold: true, size: 11 }),
-    pdfLine(388, 670, formatMoney(input.line.netPay), { bold: true, size: 18 }),
+    pdfLine(388, 670, formatPayslipMoney(input.line.netPay), { bold: true, size: 18 }),
     pdfLine(
       40,
       632,
       `Attendance: ${getNestedNumber(attendance, ['payableDays'])} payable days, ${getNestedNumber(attendance, ['lossOfPayDays'])} LOP days`,
       { size: 10 },
     ),
-    pdfRect(40, 590, 250, 28, '0.827 0.831 0.753'),
+    pdfRect(40, 590, 250, 28, '0.91 0.925 0.945'),
     pdfLine(55, 600, 'Earnings', { bold: true, size: 12 }),
-    pdfRect(322, 590, 250, 28, '0.827 0.831 0.753'),
+    pdfRect(322, 590, 250, 28, '0.91 0.925 0.945'),
     pdfLine(337, 600, 'Deductions', { bold: true, size: 12 }),
   ]
 
   earnings.forEach(([label, value], index) => {
     const y = 560 - index * 25
     commands.push(pdfLine(55, y, label as string, { size: 10 }))
-    commands.push(pdfLine(205, y, formatMoney(value as number), { size: 10 }))
+    commands.push(pdfLine(205, y, formatPayslipMoney(value as number), { size: 10 }))
   })
 
   deductions.forEach(([label, value], index) => {
     const y = 560 - index * 25
     commands.push(pdfLine(337, y, label as string, { size: 10 }))
-    commands.push(pdfLine(487, y, formatMoney(value as number), { size: 10 }))
+    commands.push(pdfLine(487, y, formatPayslipMoney(value as number), { size: 10 }))
   })
 
   commands.push(
     pdfStrokeRect(40, 350, 250, 32),
     pdfStrokeRect(322, 350, 250, 32),
-    pdfLine(55, 361, `Total earnings ${formatMoney(input.line.totalEarnings)}`, { bold: true, size: 11 }),
-    pdfLine(337, 361, `Total deductions ${formatMoney(input.line.totalDeductions)}`, { bold: true, size: 11 }),
+    pdfLine(55, 361, `Total earnings ${formatPayslipMoney(input.line.totalEarnings)}`, { bold: true, size: 11 }),
+    pdfLine(337, 361, `Total deductions ${formatPayslipMoney(input.line.totalDeductions)}`, { bold: true, size: 11 }),
     pdfLine(40, 95, 'This is a system generated payslip for payroll review records.', { size: 9 }),
-    pdfLine(40, 78, 'Generated by VetanFlow. Values are rounded to the nearest rupee.', { size: 9 }),
+    pdfLine(40, 78, `Generated by VetanFlow. Values use ${currencyCode} and are rounded to whole units.`, { size: 9 }),
   )
 
   return buildPdfDocument(commands.join('\n'))
@@ -425,7 +438,7 @@ export function createPayslipRepository(): PayslipRepository {
             period_end,
             period_start,
             status,
-            organizations(name, legal_name, pan, tan),
+            organizations(name, legal_name, currency_code, locale),
             payroll_run_lines(
               calculation_snapshot,
               employee_id,
@@ -492,10 +505,10 @@ export function createPayslipRepository(): PayslipRepository {
             totalEarnings: Number(line.total_earnings),
           },
           organization: {
+            currencyCode: organization.currency_code,
             legalName: organization.legal_name,
+            locale: organization.locale,
             name: organization.name,
-            pan: organization.pan,
-            tan: organization.tan,
           },
           periodEnd: run.period_end,
           periodStart: run.period_start,

@@ -1,10 +1,48 @@
 import { Router } from 'express'
+import { rateLimit } from 'express-rate-limit'
 import { requireAuth } from '../modules/auth/auth-middleware.js'
-import { invitationSchema, inviteUser } from '../modules/invitations/invitation-service.js'
+import {
+  invitationSchema,
+  inviteUser,
+  listOrganizationMembers,
+} from '../modules/invitations/invitation-service.js'
 
 export const invitationsRouter = Router()
+const invitationRateLimiter = rateLimit({
+  legacyHeaders: false,
+  limit: 10,
+  message: { error: 'Too many invitation attempts. Try again later.' },
+  standardHeaders: 'draft-8',
+  windowMs: 60 * 60 * 1000,
+})
 
-invitationsRouter.post('/', requireAuth, async (req, res) => {
+invitationsRouter.get('/', requireAuth, async (_, res) => {
+  if (!res.locals.auth) {
+    res.status(501).json({ error: 'Supabase Auth is not configured' })
+    return
+  }
+
+  try {
+    const result = await listOrganizationMembers(res.locals.auth.userId)
+
+    if (result.status === 'not_configured') {
+      res.status(501).json({ error: 'Supabase service role is not configured' })
+      return
+    }
+
+    if (result.status === 'forbidden') {
+      res.status(403).json({ error: 'You do not have permission to manage access' })
+      return
+    }
+
+    res.json({ data: result.data })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Unable to load organization members' })
+  }
+})
+
+invitationsRouter.post('/', invitationRateLimiter, requireAuth, async (req, res) => {
   if (!res.locals.auth) {
     res.status(501).json({ error: 'Supabase Auth is not configured' })
     return

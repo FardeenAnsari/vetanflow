@@ -1,13 +1,18 @@
 # Graph Report - Payroll  (2026-07-16)
 
 ## Corpus Check
-- 115 files · ~124,221 words
+- 145 files · ~131,708 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 952 nodes · 1265 edges · 70 communities (61 shown, 9 thin omitted)
+- 1248 nodes · 1648 edges · 85 communities (74 shown, 11 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 16 edges (avg confidence: 0.59)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `a85408bc`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_employee-repository.ts|employee-repository.ts]]
@@ -78,59 +83,73 @@
 - [[_COMMUNITY_Screenshot Guide|Screenshot Guide]]
 - [[_COMMUNITY_supabase.ts|supabase.ts]]
 - [[_COMMUNITY_open-demo-profiles.mjs|open-demo-profiles.mjs]]
+- [[_COMMUNITY_OperationsOverview.tsx|OperationsOverview.tsx]]
+- [[_COMMUNITY_check-deploy-readiness.mjs|check-deploy-readiness.mjs]]
+- [[_COMMUNITY_vercel.json|vercel.json]]
+- [[_COMMUNITY_supabase.ts|supabase.ts]]
+- [[_COMMUNITY_calculate-payroll.ts|calculate-payroll.ts]]
+- [[_COMMUNITY_check-demo-logins.ts|check-demo-logins.ts]]
+- [[_COMMUNITY_Start Here|Start Here]]
+- [[_COMMUNITY_IdCardPrintAnimation.tsx|IdCardPrintAnimation.tsx]]
+- [[_COMMUNITY_supabase.ts|supabase.ts]]
+- [[_COMMUNITY_roundMoney|roundMoney]]
+- [[_COMMUNITY_getPayrollMakerCheckerConflict|getPayrollMakerCheckerConflict]]
+- [[_COMMUNITY_instrument.ts|instrument.ts]]
+- [[_COMMUNITY_getDefaultTaxTreatment|getDefaultTaxTreatment]]
+- [[_COMMUNITY_README|README.md]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `scripts` - 24 edges
-2. `getUserRoles()` - 18 edges
-3. `compilerOptions` - 18 edges
-4. `hasAnyRole()` - 17 edges
-5. `compilerOptions` - 15 edges
-6. `requireAuth()` - 14 edges
-7. `getSupabaseServiceClient()` - 13 edges
-8. `What You Must Do When Invoked` - 12 edges
-9. `Project Handoff` - 12 edges
-10. `compilerOptions` - 11 edges
+1. `scripts` - 28 edges
+2. `AI Development Takeover` - 23 edges
+3. `getUserRoles()` - 19 edges
+4. `hasAnyRole()` - 18 edges
+5. `compilerOptions` - 18 edges
+6. `getSupabaseServiceClient()` - 16 edges
+7. `WorkspaceApp()` - 16 edges
+8. `compilerOptions` - 15 edges
+9. `requireAuth()` - 14 edges
+10. `Project Handoff` - 13 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `getSupabaseServiceClient()` --calls--> `getSupabaseServiceConfig()`  [EXTRACTED]
   backend/src/lib/supabase.ts → backend/src/config/env.ts
-- `getUserRoles()` --calls--> `getSupabaseServiceClient()`  [EXTRACTED]
-  backend/src/modules/auth/roles.ts → backend/src/lib/supabase.ts
+- `getEmployeeIdCardDocument()` --calls--> `getSupabaseServiceClient()`  [EXTRACTED]
+  backend/src/modules/hr/employee-id-card-service.ts → backend/src/lib/supabase.ts
+- `getEmployeeIdCardDocument()` --calls--> `createSupabaseUserClient()`  [EXTRACTED]
+  backend/src/modules/hr/employee-id-card-service.ts → backend/src/lib/supabase.ts
 - `regenerateRun()` --calls--> `normalizePeriodMonth()`  [EXTRACTED]
   backend/src/modules/payroll/payroll-run-repository.ts → backend/src/modules/attendance/attendance-repository.ts
 - `loadAttendanceInputs()` --calls--> `getMonthBounds()`  [EXTRACTED]
-  backend/src/modules/payroll/payroll-run-repository.ts → backend/src/modules/attendance/attendance-repository.ts
-- `loadAttendanceInputs()` --calls--> `buildAttendanceSummaries()`  [EXTRACTED]
   backend/src/modules/payroll/payroll-run-repository.ts → backend/src/modules/attendance/attendance-repository.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (70 total, 9 thin omitted)
+## Communities (85 total, 11 thin omitted)
 
 ### Community 1 - "Project Handoff"
-Cohesion: 0.22
-Nodes (8): Phase 0 — Foundation, Phase 1 — Supabase Project, Auth, And RLS, Phase 2 — HR Master Data, Phase 3 — Attendance And Leave, Phase 4 — Payroll Engine, Phase 5 — Payslips, Reports, And Exports, Phase 6 — Polish, Deployment, And Demo, Phase Tracker
+Cohesion: 0.17
+Nodes (11): Phase 0 — Foundation, Phase 1 — Supabase Project, Auth, And RLS, Phase 2 — HR Master Data, Phase 3 — Attendance And Leave, Phase 4 — Payroll Engine, Phase 5 — Payslips, Reports, And Exports, Phase 6 — Polish, Deployment, And Demo, Phase 7 — Productization, Global Defaults, And Role UX (+3 more)
 
 ### Community 2 - "hr-master-data-repository.ts"
-Cohesion: 0.05
-Nodes (35): AuditEntry, AuditRow, bankAccountNumberSchema, bankIfscSchema, DataSource, DepartmentArchiveInput, DepartmentCreateInput, DepartmentRow (+27 more)
+Cohesion: 0.04
+Nodes (36): AuditEntry, AuditRow, bankAccountNumberSchema, bankRoutingCodeSchema, DataSource, DepartmentArchiveInput, DepartmentCreateInput, DepartmentRow (+28 more)
 
 ### Community 3 - "scripts"
 Cohesion: 0.05
-Nodes (36): husky.sh script, devDependencies, husky, lint-staged, supabase, engines, node, name (+28 more)
+Nodes (41): husky.sh script, devDependencies, concurrently, husky, lint-staged, supabase, engines, node (+33 more)
 
 ### Community 4 - "App.tsx"
 Cohesion: 0.02
-Nodes (66): AppRole, AttendanceDashboard, AttendanceDashboardResponse, AttendanceEmployee, AttendanceEntry, AttendanceFormState, AttendanceHoliday, AttendanceMonthLock (+58 more)
+Nodes (74): AppRole, appRoles, AttendanceDashboard, AttendanceDashboardResponse, AttendanceEmployee, AttendanceEntry, AttendanceFormState, AttendanceHoliday (+66 more)
 
 ### Community 5 - "dependencies"
-Cohesion: 0.07
-Nodes (29): dependencies, class-variance-authority, clsx, lucide-react, motion, react, react-dom, @supabase/supabase-js (+21 more)
+Cohesion: 0.06
+Nodes (30): dependencies, class-variance-authority, clsx, lucide-react, motion, react, react-dom, @sentry/react (+22 more)
 
 ### Community 6 - "devDependencies"
 Cohesion: 0.06
-Nodes (31): dependencies, cors, dotenv, express, helmet, multer, @supabase/supabase-js, @types/multer (+23 more)
+Nodes (34): dependencies, cors, dotenv, express, express-rate-limit, helmet, multer, pdf-lib (+26 more)
 
 ### Community 7 - "app.ts"
 Cohesion: 0.06
@@ -162,7 +181,7 @@ Nodes (7): existing, handoffPath, pkg, root, scripts, snapshot, status
 
 ### Community 14 - "Phase Tracker"
 Cohesion: 0.07
-Nodes (36): createApp(), app, configuredCorsOrigins, env, envSchema, getSupabaseBaseConfig(), getSupabasePublicConfig(), getSupabaseServiceConfig() (+28 more)
+Nodes (37): createApp(), app, configuredCorsOrigins, env, envSchema, getSupabaseBaseConfig(), getSupabasePublicConfig(), getSupabaseServiceConfig() (+29 more)
 
 ### Community 15 - "tsconfig.json"
 Cohesion: 0.29
@@ -173,16 +192,16 @@ Cohesion: 0.33
 Nodes (5): For /graphify explain, For /graphify path, graphify reference: query, path, explain, Step 0 — Constrained query expansion (REQUIRED before traversal), Step 1 — Traversal
 
 ### Community 17 - "Architecture"
-Cohesion: 0.22
-Nodes (9): Architecture, Core Domains, Deployment Shape, Implemented Output Flow, Implemented Payroll Flow, Implemented Time Flow, Runtime Shape, Security Principles (+1 more)
+Cohesion: 0.10
+Nodes (19): Account Routing, Alternative: Vercel, Render, And Supabase, Architecture, Core Domains, Data Model, Deployment Choices, Documents And Exports, Extension Rules (+11 more)
 
 ### Community 18 - ".oxlintrc.json"
 Cohesion: 0.33
 Nodes (5): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema
 
 ### Community 19 - "Plan"
-Cohesion: 0.33
-Nodes (5): Completed, Open Questions, Phase 6 Action Items, Plan, Scope
+Cohesion: 0.29
+Nodes (6): Current Quality Baseline, Decision Queue, Deliberately Out Of Scope, Delivered Scope, Phase 10: Hosted Production Operations, Plan
 
 ### Community 20 - "UI Direction"
 Cohesion: 0.40
@@ -201,20 +220,20 @@ Cohesion: 0.50
 Nodes (3): For --cluster-only, For --update (incremental re-extraction), graphify reference: incremental update and cluster-only
 
 ### Community 24 - "VetanFlow Frontend"
-Cohesion: 0.50
-Nodes (3): Scripts, UI Direction, VetanFlow Frontend
+Cohesion: 0.29
+Nodes (6): Commands, Environment, Routes, Structure, UI Rules, VetanFlow Frontend
 
 ### Community 31 - "Project Handoff"
-Cohesion: 0.17
-Nodes (12): Confirmed Stack, Current File Map, Current Phase, Current Verification Notes, Development Rules, Generated Snapshot, How To Run, How To Study The Project (+4 more)
+Cohesion: 0.12
+Nodes (16): Architecture Decisions, Backend, Current File Map, Current Phase, Current Product State, Database And Automation, Development Rules, Final Verification (+8 more)
 
 ### Community 32 - "calculate-payroll.ts"
-Cohesion: 0.09
-Nodes (19): ApprovalStage, DataSource, EmployeeRow, firstRelation(), getInclusiveDays(), LeaveDashboard, LeaveEmployee, LeaveRequest (+11 more)
+Cohesion: 0.07
+Nodes (26): postgresUuidSchema, ApprovalStage, createLeaveRepository(), DataSource, EmployeeRow, firstRelation(), getInclusiveDays(), LeaveDashboard (+18 more)
 
 ### Community 33 - "Automation"
 Cohesion: 0.22
-Nodes (8): Automation, GitHub Actions, Handoff Automation, Local Git Hooks, Main Commands, Phase Close-Out Rule, Supabase Automation, Verification
+Nodes (8): Automation, Command Map, Documentation Closeout, GitHub Actions And Hooks, Reset Safety, Showcase Provisioning, Supabase Workflow, Verification Gate
 
 ### Community 34 - "Supabase Cloud Setup"
 Cohesion: 0.29
@@ -225,28 +244,28 @@ Cohesion: 0.33
 Nodes (5): Build Or Update Graph, Graphify, Install State, Recommended Use, Repeatable Install
 
 ### Community 36 - "Payroll System"
-Cohesion: 0.22
-Nodes (9): Current Status, Key Commands, Project Layout, Run Locally, Stack, Study Path, Verify, VetanFlow (+1 more)
+Cohesion: 0.11
+Nodes (16): Architecture, Data Model, Deployment Shape, Feature Map, How To Demonstrate The Product, Licensing, Phase Story, Product Surfaces (+8 more)
 
 ### Community 37 - "README.md"
-Cohesion: 0.25
+Cohesion: 0.50
 Nodes (3): Capture Command, Captured, Screenshot Manifest
 
 ### Community 38 - "hr.ts"
 Cohesion: 0.12
-Nodes (15): createHrMasterDataRepository(), departmentArchiveSchema, departmentCreateSchema, departmentUpdateSchema, hrEmployeeCreateSchema, hrEmployeeUpdateSchema, HrMasterDataRepository, locationArchiveSchema (+7 more)
+Nodes (16): createHrMasterDataRepository(), departmentArchiveSchema, departmentCreateSchema, departmentUpdateSchema, hrEmployeeCreateSchema, hrEmployeeUpdateSchema, HrMasterDataRepository, locationArchiveSchema (+8 more)
 
 ### Community 39 - "toEmployee"
 Cohesion: 0.50
 Nodes (4): createSignedPhotoUrl(), firstRelation(), toEmployee(), toEmployeeWithPhoto()
 
 ### Community 41 - "App"
-Cohesion: 0.22
-Nodes (11): App(), EmployeeSelfService(), formatCurrency(), formatDate(), formatStatus(), isHrRole(), isLeaveApproverRole(), isPayrollApprovalRole() (+3 more)
+Cohesion: 0.18
+Nodes (12): EmployeeSelfService(), formatCurrencyValue(), formatStatus(), getAssignableInvitationRoles(), getNoticeTone(), isHrRole(), isLeaveApproverRole(), isPayrollApprovalRole() (+4 more)
 
 ### Community 42 - "EmployeeIdCard.tsx"
-Cohesion: 0.43
-Nodes (6): EmployeeIdCard(), EmployeeIdCardEmployee, EmployeeIdCardProps, formatDate(), formatStatus(), getInitials()
+Cohesion: 0.39
+Nodes (7): EmployeeIdCard(), EmployeeIdCardEmployee, EmployeeIdCardProps, formatDate(), formatStatus(), getInitials(), getStatusClass()
 
 ### Community 43 - "createEmptyEmployeeForm"
 Cohesion: 0.20
@@ -257,8 +276,8 @@ Cohesion: 0.67
 Nodes (3): darkenColor(), Folder(), FolderProps
 
 ### Community 45 - "supabase.ts"
-Cohesion: 0.39
-Nodes (9): canWrite(), getUserRoles(), hasAnyRole(), canWrite(), canWrite(), canExportPayroll(), canApprovePayroll(), canWritePayroll() (+1 more)
+Cohesion: 0.32
+Nodes (12): getSupabaseServiceClient(), canWrite(), getUserRoles(), hasAnyRole(), canWrite(), inviteUser(), listOrganizationMembers(), canWrite() (+4 more)
 
 ### Community 46 - "formatLabel"
 Cohesion: 0.40
@@ -270,11 +289,11 @@ Nodes (42): ApprovedLeaveRow, assertMonthIsOpen(), AttendanceDashboard, Attendan
 
 ### Community 48 - "payroll.ts"
 Cohesion: 0.06
-Nodes (37): calculatePayrollPreview(), PayrollInput, payrollInputSchema, PayrollPreview, roundMoney(), buildBankExport(), buildDepartmentCostExport(), buildExport() (+29 more)
+Nodes (38): calculatePayrollPreview(), PayrollInput, payrollInputSchema, PayrollPreview, roundMoney(), buildBankExport(), buildDeductionsExport(), buildDepartmentCostExport() (+30 more)
 
 ### Community 49 - "leave.ts"
-Cohesion: 0.18
-Nodes (7): postgresUuidSchema, createLeaveRepository(), LeaveRepository, leaveRequestCancelSchema, leaveRequestCreateSchema, leaveRequestReviewSchema, LeaveWriteError
+Cohesion: 0.11
+Nodes (28): blue, border, buildEmployeeIdCardPdf(), cyan, drawField(), drawFittedText(), drawPhoto(), drawVerificationMark() (+20 more)
 
 ### Community 50 - "roles.ts"
 Cohesion: 0.18
@@ -282,7 +301,7 @@ Nodes (11): RoleRow, createEmployeeRepository(), EmployeeCreateInput, employeeCr
 
 ### Community 51 - "employee-repository.ts"
 Cohesion: 0.08
-Nodes (32): buildPayslipPdf(), buildPdfDocument(), DataSource, firstRelation(), formatDate(), formatMoney(), GeneratedPayslip, getGeneratedPayslip() (+24 more)
+Nodes (31): buildPayslipPdf(), buildPdfDocument(), DataSource, firstRelation(), GeneratedPayslip, getDeductionValue(), getGeneratedPayslip(), getNestedNumber() (+23 more)
 
 ### Community 52 - "regenerateRun"
 Cohesion: 0.22
@@ -297,27 +316,35 @@ Cohesion: 0.40
 Nodes (5): firstRelation(), loadAttendanceInputs(), toAttendanceEmployee(), toAttendanceEntry(), toHoliday()
 
 ### Community 55 - "roundMoney"
-Cohesion: 0.67
-Nodes (3): buildVarianceWarnings(), calculateOvertimeAmount(), roundMoney()
+Cohesion: 0.07
+Nodes (31): addDays(), authUserIds, authUsers, authUsersByKey, credentialByKey, credentialPath, credentials, currentMonth (+23 more)
+
+### Community 56 - "getPayrollMakerCheckerConflict"
+Cohesion: 0.08
+Nodes (16): BrandLogo(), BrandLogoProps, BlogArticle, blogArticles, JourneyStep, journeySteps, roleStories, trustSignals (+8 more)
 
 ### Community 57 - "invitation-service.ts"
-Cohesion: 0.24
-Nodes (9): getSupabaseServiceClient(), adminAssignableRoles, AuthContext, invitationActorRoles, Locals, InvitationInput, invitationSchema, inviteUser() (+1 more)
+Cohesion: 0.18
+Nodes (11): adminAssignableRoles, AuthContext, canAssignRole(), invitationActorRoles, Locals, InvitationInput, invitationSchema, MemberRoleRow (+3 more)
+
+### Community 58 - "getDefaultTaxTreatment"
+Cohesion: 0.25
+Nodes (8): 1. Create the organization member, 2. Create the employee record, 3. Capture leave and attendance, 4. Lock the source month, 5. Calculate payroll, 6. Review, approve, and finalize, 7. Publish private outputs, The Complete Journey
 
 ### Community 59 - "capture-authenticated-demo-screenshots.mjs"
-Cohesion: 0.08
-Nodes (28): browser, captureSession(), CdpSession, clientOptions, delay(), ensureAuthUser(), ensureDemoAccess(), findAuthUserByEmail() (+20 more)
+Cohesion: 0.07
+Nodes (32): browser, captureSession(), CdpSession, clientOptions, credentialPath, delay(), employeeCredential, findBrowser() (+24 more)
 
 ### Community 60 - "prepare-demo-data.ts"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (10): attendanceLockId, bucketIds, db, makerRole, organization, payslipRepository, period, root (+2 more)
 
 ### Community 61 - "check-demo-readiness.mjs"
-Cohesion: 0.14
+Cohesion: 0.13
 Nodes (6): checks, demoPeriodMonth, failures, root, symbols, warnings
 
 ### Community 62 - "Recorded Demo Script"
-Cohesion: 0.18
+Cohesion: 0.17
 Nodes (11): 0:00 to 0:45, Opening, 0:45 to 1:45, HR Master Data, 1:45 to 2:45, Leave And Attendance, 2:45 to 4:15, Payroll Run, 4:15 to 5:15, Approval Control, 5:15 to 6:30, Payslips And Exports, 6:30 to 7:15, Engineering Close, Recorded Demo Script (+3 more)
 
 ### Community 63 - "capture-demo-screenshots.mjs"
@@ -329,40 +356,80 @@ Cohesion: 0.29
 Nodes (6): After A Demo, Before A Demo, Demo Reset Checklist, During A Demo, Readiness Check Output, Remote Database Safety
 
 ### Community 65 - "Demo Walkthrough"
-Cohesion: 0.29
-Nodes (6): Before You Start, Cleanup, Demo Walkthrough, Employee Flow, Owner/Admin Flow, Talking Points
+Cohesion: 0.25
+Nodes (7): Before You Start, Cleanup, Demo Walkthrough, Employee Flow, Owner Flow, Role Contrast, Talking Points
 
 ### Community 66 - "Deployment"
-Cohesion: 0.29
-Nodes (6): 1. Supabase Cloud, 2. Backend Service, 3. Frontend Static App, 4. Smoke Test, 5. CI/CD Notes, Deployment
+Cohesion: 0.18
+Nodes (10): Deployment, Operational Launch Checklist, Option A: Vercel Frontend And API, Option B: Vercel Frontend And Render API, Preflight, Production Smoke Test, Render, Sentry (+2 more)
 
 ### Community 67 - "Screenshot Guide"
 Cohesion: 0.29
 Nodes (6): Authenticated Screens, Capture Notes, Manual Fallback, Quick Capture, Recommended Shot List, Screenshot Guide
 
 ### Community 68 - "supabase.ts"
+Cohesion: 0.10
+Nodes (24): getWorkspaceSectionFromHash(), getMetrics(), OperationsOverview(), OperationsOverviewProps, OverviewMetric, roleCopy, StatusBadge(), StatusBadgeProps (+16 more)
+
+### Community 70 - "OperationsOverview.tsx"
+Cohesion: 0.09
+Nodes (23): AI Development Takeover, API Map, Authentication And Account Switching, Commands, Database Map, Deployment, Design Rules, Environment Variables (+15 more)
+
+### Community 71 - "check-deploy-readiness.mjs"
+Cohesion: 0.20
+Nodes (7): checks, envHas(), failures, read(), remote, root, rootPackage
+
+### Community 72 - "vercel.json"
+Cohesion: 0.33
+Nodes (5): buildCommand, framework, installCommand, outputDirectory, rewrites
+
+### Community 73 - "supabase.ts"
+Cohesion: 0.25
+Nodes (5): lineIds, root, runIds, storagePaths, supabase
+
+### Community 74 - "calculate-payroll.ts"
+Cohesion: 0.29
+Nodes (6): CountryOption, countryOptions, currencyOptions, getCountryOption(), localeOptions, timezoneOptions
+
+### Community 75 - "check-demo-logins.ts"
+Cohesion: 0.25
+Nodes (5): credentialsPath, DemoCredential, ownerVisibleEmployeeIds, results, root
+
+### Community 76 - "Start Here"
+Cohesion: 0.33
+Nodes (6): 1. Install and configure, 2. Link the database, 3. Build the complete showcase, 4. Run the product, Prerequisites, Start Here
+
+### Community 78 - "IdCardPrintAnimation.tsx"
+Cohesion: 0.40
+Nodes (4): IdCardPrintAnimation(), IdCardPrintAnimationProps, PrintStage, stageCopy
+
+### Community 79 - "supabase.ts"
 Cohesion: 0.50
 Nodes (3): isSupabaseConfigured, supabaseKey, supabaseUrl
 
+### Community 80 - "roundMoney"
+Cohesion: 0.67
+Nodes (3): buildVarianceWarnings(), calculateOvertimeAmount(), roundMoney()
+
 ## Knowledge Gaps
-- **540 isolated node(s):** `husky.sh script`, `name`, `version`, `private`, `type` (+535 more)
+- **713 isolated node(s):** `husky.sh script`, `name`, `version`, `private`, `type` (+708 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **9 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **11 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `supabase` connect `scripts` to `Phase Tracker`?**
-  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+  _High betweenness centrality (0.023) - this node is a cross-community bridge._
 - **What connects `husky.sh script`, `name`, `version` to the rest of the system?**
-  _540 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _713 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `hr-master-data-repository.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.044444444444444446 - nodes in this community are weakly interconnected._
 - **Should `scripts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05263157894736842 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.046511627906976744 - nodes in this community are weakly interconnected._
 - **Should `App.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.024390243902439025 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02040816326530612 - nodes in this community are weakly interconnected._
 - **Should `dependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.06666666666666667 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05714285714285714 - nodes in this community are weakly interconnected._

@@ -5,6 +5,14 @@ import { createApp } from './app.js'
 const app = createApp()
 
 describe('app', () => {
+  it('adds security and rate-limit headers to API responses', async () => {
+    const response = await request(app).get('/api/employees')
+
+    expect(response.headers['x-content-type-options']).toBe('nosniff')
+    expect(response.headers.ratelimit).toBeTruthy()
+    expect(response.headers['x-powered-by']).toBeUndefined()
+  })
+
   it('returns health status', async () => {
     const response = await request(app).get('/health').expect(200)
 
@@ -89,12 +97,12 @@ describe('app', () => {
     const response = await request(app)
       .post('/api/employees')
       .send({
-        annualCtc: 840000,
+        annualCompensation: 840000,
         designation: 'People Operations Associate',
-        employeeCode: 'IND-004',
+        employeeCode: 'VF-004',
         fullName: 'Demo Employee',
         joiningDate: '2026-07-01',
-        location: 'Kolkata',
+        location: 'New York',
         organizationId: '00000000-0000-0000-0000-000000000001',
         status: 'draft',
         workEmail: 'demo.employee@example.com',
@@ -114,6 +122,39 @@ describe('app', () => {
       .expect(501)
 
     expect(response.body.error).toBe('Supabase service role is not configured')
+  })
+
+  it('does not update organization preferences until Supabase is configured', async () => {
+    const response = await request(app)
+      .patch('/api/hr/organization')
+      .send({
+        countryCode: 'US',
+        currencyCode: 'USD',
+        locale: 'en-US',
+        name: 'VetanFlow Labs',
+        organizationId: '00000000-0000-0000-0000-000000000001',
+        timezone: 'America/New_York',
+      })
+      .expect(501)
+
+    expect(response.body.error).toBe('Supabase service role is not configured')
+  })
+
+  it('validates organization locale and timezone before writing', async () => {
+    const response = await request(app)
+      .patch('/api/hr/organization')
+      .send({
+        countryCode: 'USA',
+        currencyCode: 'US',
+        locale: 'not a locale',
+        name: 'VetanFlow Labs',
+        organizationId: '00000000-0000-0000-0000-000000000001',
+        timezone: 'Mars/Olympus',
+      })
+      .expect(400)
+
+    expect(response.body.error).toBe('Invalid organization settings')
+    expect(response.body.details).toBeTruthy()
   })
 
   it('does not update HR departments until Supabase is configured', async () => {
@@ -144,10 +185,10 @@ describe('app', () => {
     const response = await request(app)
       .patch('/api/hr/locations/20000000-0000-0000-0000-000000000001')
       .send({
-        city: 'Kolkata',
-        countryCode: 'IN',
+        city: 'New York',
+        countryCode: 'US',
         isActive: true,
-        name: 'Kolkata HQ',
+        name: 'New York HQ',
         organizationId: '00000000-0000-0000-0000-000000000001',
         state: 'West Bengal',
       })
@@ -171,8 +212,8 @@ describe('app', () => {
     const response = await request(app)
       .post('/api/hr/employees')
       .send({
-        annualCtc: 840000,
-        code: 'IND-004',
+        annualCompensation: 840000,
+        code: 'VF-004',
         departmentId: '10000000-0000-0000-0000-000000000001',
         fullName: 'Demo Employee',
         joiningDate: '2026-07-01',
@@ -441,6 +482,20 @@ describe('app', () => {
       .expect(400)
 
     expect(response.body.error).toBe('Invalid employee id')
+  })
+
+  it('validates employee IDs before generating ID cards', async () => {
+    const response = await request(app).get('/api/hr/employees/not-a-uuid/id-card').expect(400)
+
+    expect(response.body.error).toBe('Invalid employee id')
+  })
+
+  it('does not generate employee ID cards until Supabase is configured', async () => {
+    const response = await request(app)
+      .get('/api/hr/employees/00000000-0000-0000-0000-000000000001/id-card')
+      .expect(501)
+
+    expect(response.body.error).toBe('Supabase document service is not configured')
   })
 
   it('does not upload employee photos until Supabase is configured', async () => {

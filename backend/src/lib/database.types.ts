@@ -187,11 +187,11 @@ export type Database = {
       }
       employees: {
         Row: {
-          annual_ctc: number
+          annual_compensation: number
           bank_account_holder_name: string | null
           bank_account_number: string | null
-          bank_ifsc: string | null
           bank_name: string | null
+          bank_routing_code: string | null
           created_at: string
           department_id: string | null
           designation: string
@@ -211,11 +211,11 @@ export type Database = {
           work_location_id: string | null
         }
         Insert: {
-          annual_ctc?: number
+          annual_compensation?: number
           bank_account_holder_name?: string | null
           bank_account_number?: string | null
-          bank_ifsc?: string | null
           bank_name?: string | null
+          bank_routing_code?: string | null
           created_at?: string
           department_id?: string | null
           designation: string
@@ -235,11 +235,11 @@ export type Database = {
           work_location_id?: string | null
         }
         Update: {
-          annual_ctc?: number
+          annual_compensation?: number
           bank_account_holder_name?: string | null
           bank_account_number?: string | null
-          bank_ifsc?: string | null
           bank_name?: string | null
+          bank_routing_code?: string | null
           created_at?: string
           department_id?: string | null
           designation?: string
@@ -415,31 +415,34 @@ export type Database = {
       }
       organizations: {
         Row: {
+          country_code: string
           created_at: string
-          gstin: string | null
+          currency_code: string
           id: string
           legal_name: string | null
+          locale: string
           name: string
-          pan: string | null
-          tan: string | null
+          timezone: string
         }
         Insert: {
+          country_code?: string
           created_at?: string
-          gstin?: string | null
+          currency_code?: string
           id?: string
           legal_name?: string | null
+          locale?: string
           name: string
-          pan?: string | null
-          tan?: string | null
+          timezone?: string
         }
         Update: {
+          country_code?: string
           created_at?: string
-          gstin?: string | null
+          currency_code?: string
           id?: string
           legal_name?: string | null
+          locale?: string
           name?: string
-          pan?: string | null
-          tan?: string | null
+          timezone?: string
         }
         Relationships: []
       }
@@ -705,7 +708,7 @@ export type Database = {
       }
       salary_revisions: {
         Row: {
-          annual_ctc: number
+          annual_compensation: number
           created_at: string
           created_by: string | null
           currency_code: string
@@ -716,7 +719,7 @@ export type Database = {
           reason: string
         }
         Insert: {
-          annual_ctc: number
+          annual_compensation: number
           created_at?: string
           created_by?: string | null
           currency_code?: string
@@ -727,7 +730,7 @@ export type Database = {
           reason: string
         }
         Update: {
-          annual_ctc?: number
+          annual_compensation?: number
           created_at?: string
           created_by?: string | null
           currency_code?: string
@@ -835,16 +838,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      record_salary_revision: {
+      record_compensation_revision: {
         Args: {
           p_actor_id?: string
-          p_annual_ctc: number
+          p_annual_compensation: number
           p_effective_from: string
           p_employee_id: string
           p_reason: string
         }
         Returns: {
-          annual_ctc: number
+          annual_compensation: number
           created_at: string
           created_by: string | null
           currency_code: string

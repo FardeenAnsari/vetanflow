@@ -5,7 +5,7 @@ describe('buildPayslipPdf', () => {
   it('creates a readable PDF payslip buffer', () => {
     const pdf = buildPayslipPdf({
       employee: {
-        code: 'IND-001',
+        code: 'VF-001',
         designation: 'Payroll Analyst',
         email: 'aarav@example.com',
         name: 'Aarav Mehta',
@@ -18,13 +18,13 @@ describe('buildPayslipPdf', () => {
           },
           payroll: {
             deductions: {
-              employeeEsi: 0,
-              employeePf: 1800,
+              localPayrollTax: 200,
               postTaxAdjustments: 500,
               preTaxAdjustments: 0,
-              professionalTax: 200,
-              tds: 0,
+              retirementContribution: 1800,
+              socialInsurance: 0,
               unpaidLeave: 1000,
+              withholdingTax: 0,
             },
             earnings: {
               fixedGross: 80000,
@@ -40,10 +40,8 @@ describe('buildPayslipPdf', () => {
         totalEarnings: 83450,
       },
       organization: {
-        legalName: 'VetanFlow Demo India Pvt Ltd',
-        name: 'VetanFlow Demo India',
-        pan: 'ABCDE1234F',
-        tan: 'MUMV12345A',
+        legalName: 'VetanFlow Labs, Inc.',
+        name: 'VetanFlow Labs',
       },
       periodEnd: '2026-07-31',
       periodStart: '2026-07-01',
@@ -53,7 +51,7 @@ describe('buildPayslipPdf', () => {
     expect(text.startsWith('%PDF-1.4')).toBe(true)
     expect(text).toContain('VetanFlow Payslip')
     expect(text).toContain('Aarav Mehta')
-    expect(text).toContain('INR 79,950')
+    expect(text).toContain('USD 79,950')
     expect(text).toContain('%%EOF')
   })
 })
@@ -70,7 +68,7 @@ describe('getPayslipPortalItem', () => {
           employee_id: 'employee_001',
           employees: {
             designation: 'Frontend Engineer',
-            employee_code: 'IND-001',
+            employee_code: 'VF-001',
             full_name: 'Aarav Mehta',
             work_email: 'aarav@example.com',
           },
@@ -95,7 +93,7 @@ describe('getPayslipPortalItem', () => {
     )
 
     expect(item).toMatchObject({
-      employeeCode: 'IND-001',
+      employeeCode: 'VF-001',
       employeeName: 'Aarav Mehta',
       netPay: 97750,
       periodEnd: '2026-09-30',

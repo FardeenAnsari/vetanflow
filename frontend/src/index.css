@@ -1,20 +1,37 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Inter, "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
   --vf-navy: #0a2947;
-  --vf-cream: #f3e4c9;
-  --vf-sage: #d3d4c0;
-  --vf-brown: #8b5e3c;
-  --vf-brown-dark: #6f472c;
-  --vf-paper: #fffaf0;
-  --vf-surface: #fbf7ef;
-  --vf-border: rgba(10, 41, 71, 0.14);
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  --vf-primary: #1d5fd1;
+  --vf-primary-hover: #174ca8;
+  --vf-primary-soft: #eaf1ff;
+  --vf-primary-border: #b9cdf6;
+  --vf-cream: var(--vf-primary-soft);
+  --vf-sage: #e7ebf0;
+  --vf-brown: var(--vf-primary);
+  --vf-brown-dark: var(--vf-primary-hover);
+  --vf-paper: #ffffff;
+  --vf-surface: #f5f7fa;
+  --vf-surface-raised: #f8fafc;
+  --vf-border: #dfe5ec;
+  --vf-border-strong: #c7d0da;
+  --vf-text-muted: #5f6b7a;
+  --vf-icon-muted: #7b8795;
+  --vf-focus: rgba(29, 95, 209, 0.18);
+  --vf-success: #15803d;
+  --vf-success-soft: #ecfdf3;
+  --vf-warning: #a15c07;
+  --vf-warning-soft: #fffbeb;
+  --vf-danger: #b42318;
+  --vf-danger-soft: #fff1f0;
+  --vf-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --vf-shadow-md: 0 12px 30px rgba(15, 39, 66, 0.12);
+  font-family: Inter, "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   color: var(--vf-navy);
   background: var(--vf-surface);
   font-synthesis: none;
@@ -43,15 +60,38 @@ a {
   touch-action: manipulation;
 }
 
+button,
+select,
+input,
+textarea {
+  font: inherit;
+}
+
+button:not(:disabled),
+select:not(:disabled) {
+  cursor: pointer;
+}
+
 a {
-  color: inherit;
   text-decoration: none;
 }
 
+a:not([class*="text-"]) {
+  color: inherit;
+}
+
 button:focus-visible,
-a:focus-visible {
-  outline: 3px solid var(--vf-brown);
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--vf-primary);
   outline-offset: 2px;
+}
+
+::selection {
+  background: var(--vf-primary-soft);
+  color: var(--vf-navy);
 }
 
 @media (prefers-reduced-motion: reduce) {

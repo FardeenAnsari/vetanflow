@@ -27,7 +27,9 @@ loadEnvFile(join(root, 'backend/.env'))
 
 const supabaseUrl = process.env.SUPABASE_URL
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY
-const demoPeriodMonth = normalizePeriodMonth(process.env.DEMO_PERIOD_MONTH ?? '2026-09-01')
+const demoPeriodMonth = normalizePeriodMonth(
+  process.env.DEMO_PERIOD_MONTH ?? getDefaultDemoPeriodMonth(),
+)
 
 const checks = []
 
@@ -61,6 +63,11 @@ function normalizePeriodMonth(value) {
   }
 
   return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-01`
+}
+
+function getDefaultDemoPeriodMonth() {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 10)
 }
 
 function getMonthBounds(month) {
@@ -124,7 +131,7 @@ if (!supabaseUrl || !serviceRoleKey) {
       supabase
         .from('employees')
         .select(
-          'id,employee_code,full_name,status,profile_id,bank_account_holder_name,bank_account_number,bank_ifsc,bank_name',
+          'id,employee_code,full_name,status,profile_id,bank_account_holder_name,bank_account_number,bank_routing_code,bank_name',
         )
         .order('employee_code', { ascending: true }),
     )
@@ -134,7 +141,7 @@ if (!supabaseUrl || !serviceRoleKey) {
       (employee) =>
         hasValue(employee.bank_account_holder_name) &&
         hasValue(employee.bank_account_number) &&
-        hasValue(employee.bank_ifsc) &&
+        hasValue(employee.bank_routing_code) &&
         hasValue(employee.bank_name),
     )
 
@@ -225,7 +232,7 @@ if (!supabaseUrl || !serviceRoleKey) {
         (employee) =>
           !hasValue(employee.bank_account_holder_name) ||
           !hasValue(employee.bank_account_number) ||
-          !hasValue(employee.bank_ifsc) ||
+          !hasValue(employee.bank_routing_code) ||
           !hasValue(employee.bank_name),
       )
 

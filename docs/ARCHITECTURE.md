@@ -1,66 +1,207 @@
 # Architecture
 
+VetanFlow is a role-based payroll operations system with a React interface, an Express authority layer, and Supabase for identity, data, security policies, and private files.
+
 ## Runtime Shape
 
-```txt
-React/Vite frontend
-  -> Express API
-    -> Supabase Postgres/Auth/Storage
+```mermaid
+flowchart LR
+  visitor["Public visitor"] --> public["React public site"]
+  member["Signed-in member"] --> workspace["Role-shaped React workspace"]
+  workspace -->|"Bearer token"| api["Express API"]
+  api --> auth["Supabase Auth verification"]
+  api --> rules["Zod + domain rules"]
+  rules --> scoped["User-scoped client"]
+  rules --> service["Guarded service client"]
+  scoped --> db["Postgres + RLS"]
+  service --> db
+  service --> storage["Private Storage"]
+  db --> audit["Audit + immutable snapshots"]
 ```
 
-The browser uses Supabase only for safe client auth flows with a publishable key. Payroll mutations, role management, exports, and sensitive calculations go through the Express API.
+Local development uses two processes through `npm run dev`:
 
-## Why Express
+- Vite serves the frontend on `5173` or the next free port.
+- Express serves the API on `4000`.
 
-Express is recognizable, simple to explain, and strong enough for this project when paired with TypeScript, Zod validation, clear routes, and tests.
+The compact production shape uses one Vercel project:
+
+- Vercel serves `frontend/dist`.
+- `/api/*` rewrites to `api/[...path].ts`.
+- The function exports the same Express app used by the standalone server.
+
+`render.yaml` remains an alternative standalone backend deployment.
+
+## Responsibility Boundaries
+
+| Layer | Owns | Must not own |
+| --- | --- | --- |
+| React | navigation, forms, loading, responsive presentation, role-specific UX | authorization, role assignment, payroll truth |
+| Express | token verification, tenant/role resolution, validation, business rules, PDFs, CSVs | long-term data or browser session persistence |
+| Supabase Auth | user identity and sessions | application role selection |
+| Postgres | tenant records, RLS, privileges, locks, immutable payroll state | visual workflow state |
+| Storage | private employee photos and payslip PDFs | public permanent payroll links |
+| Sentry | optional operational error/tracing telemetry | payroll source data or secrets |
+
+The browser receives only a Supabase publishable key. The service-role key stays in backend/serverless environments and trusted scripts.
+
+## Identity And Roles
+
+```text
+auth.users
+  -> profiles (user + organization)
+  -> user_roles (organization-scoped role)
+  -> employees.profile_id (optional self-service link)
+```
+
+Roles are `owner`, `admin`, `hr`, `finance`, `manager`, and `employee`. Owner is the highest organization role. Users never select a role during signup.
+
+The backend constructs an Auth context from the Bearer token, profile, organization, and roles. Repositories then choose one of two database paths:
+
+- user-scoped Supabase client for RLS-filtered reads
+- service client for validated, explicitly authorized writes and sensitive reads
+
+Frontend navigation mirrors the role model but is never treated as a security boundary.
+
+## Account Routing
+
+Public routes render without an Auth requirement. `/login` handles both new sign-in and persisted sessions:
+
+1. No session: show email/password sign-in.
+2. Existing session: show the current email with Continue or Use another account.
+3. Use another account: local-scope sign-out, then clean sign-in.
+4. Successful sign-in: redirect to `/app`.
+5. `/app`: load the user's roles and render the correct workspace.
+
+This prevents a stored owner session from silently redirecting every attempted login back to the owner workspace.
 
 ## Core Domains
 
-- Identity: auth users, profiles, organization membership, roles.
-- HR master data: departments, locations, employees, employment status.
-- Time: attendance entries, leave policies, leave requests, holidays.
-- Payroll setup: salary structures, pay components, statutory settings.
-- Payroll processing: payroll runs, employee run lines, deductions, net pay, approval status.
-- Documents: payslips, tax summaries, employee uploads.
-- Controls: audit logs, locked periods, maker-checker approvals.
+### Organization And Access
 
-## Implemented Time Flow
+- organization name, country, currency, locale, timezone
+- profiles and organization membership
+- hierarchy-safe invitations and role assignment
+- audit trail
 
-Phase 3 stores leave requests and attendance changes as auditable backend-controlled writes. Employees can request leave, direct managers can review relevant requests, HR/admin can approve or reject, and approved leave feeds attendance summaries. HR/admin can record attendance entries and holidays for a payroll month, then lock that month. Locked months reject attendance and holiday edits at both the API layer and the database trigger layer. The attendance dashboard merges entries, approved leave, holidays, and half-day loss of pay into payroll preview inputs.
+### HR Master Data
 
-## Implemented Payroll Flow
+- departments and work locations
+- employees, status, reporting manager, photo, and payment readiness
+- compensation revision history
+- digital and downloadable two-sided employee ID cards
 
-Phase 4A creates draft payroll runs from locked attendance months. The backend refuses payroll creation until attendance is locked, calculates active employee lines with the same attendance summary logic used by the Attendance control UI, stores monetary totals and calculation snapshots in `payroll_run_lines`, and keeps the frontend as a review surface rather than the source of payroll math.
+### Leave And Attendance
 
-Phase 4B moves runs through `draft -> reviewing -> approved -> finalized`. HR/payroll roles can prepare and submit runs; owner/admin/finance roles can approve and finalize. Finalized payroll runs and finalized run lines are protected by database triggers, so later service-role writes cannot quietly mutate finalized payroll data.
+- employee leave request and cancellation
+- manager/HR decision and escalation
+- attendance status, half day, absence, overtime, holidays
+- payroll-impact summary
+- source-month lock and database trigger protection
 
-Phase 4C adds run-level payroll adjustments. Payroll teams can add or remove draft/reviewing employee earnings, deductions, and reimbursements; each change regenerates payroll lines with automatic overtime pay from locked attendance, richer India-first statutory fields, adjustment snapshots, and previous-run net-pay variance warnings.
+### Payroll
 
-Phase 4D adds maker-checker separation. The user who creates or submits a payroll run cannot approve or finalize that same run, even when they otherwise have an owner/admin/finance role. A different authorized checker must complete approval/finalization, and the frontend mirrors that rule by disabling the blocked actions and explaining that a different checker is required.
+- draft creation only from a locked attendance month
+- calculation snapshots and previous-run variance
+- earnings, deductions, reimbursements, and overtime adjustments
+- `draft -> reviewing -> approved -> finalized`
+- maker-checker separation
+- finalized-run, line, and adjustment immutability
 
-## Implemented Output Flow
+### Documents And Exports
 
-Phase 5 turns finalized payroll into distributable outputs. The backend generates payslip PDFs only for finalized runs, uploads them to a private Supabase Storage bucket, stores payslip records in Postgres, and creates short-lived signed URLs only after checking the request through the user's RLS-scoped client. Employees can see their own payslip archive, while payroll-facing roles can generate and export outputs from the run detail view.
+- finalized-run payslip PDF generation
+- private Storage upload and database publication record
+- RLS-backed signed payslip delivery
+- payout, deductions, and department-cost CSV exports
+- employee ID PDF export with role and row-scope checks
 
-The same finalized-run boundary protects reports. Bank payout, statutory summary, and department cost exports are generated server-side from payroll snapshots and employee master data. Bank exports validate required bank fields before producing a file, so missing payout data is visible before money movement.
+## Payroll Data Flow
 
-## Deployment Shape
+```mermaid
+flowchart TD
+  employee["Employee master + compensation"] --> lock["Locked attendance month"]
+  leave["Approved leave"] --> lock
+  attendance["Attendance + holidays + overtime"] --> lock
+  lock --> draft["Draft payroll run"]
+  draft --> snapshots["Employee calculation snapshots"]
+  adjustments["Run adjustments"] --> snapshots
+  snapshots --> review["Review + variance"]
+  review -->|"different checker"| approved["Approved"]
+  approved --> finalized["Finalized + immutable"]
+  finalized --> payslips["Private payslip PDFs"]
+  finalized --> exports["Finance CSV exports"]
+```
 
-The app deploys as two services plus Supabase:
+The frontend does not calculate authoritative payroll. `calculate-payroll.ts` and `payroll-run-repository.ts` run on the backend, and the resulting values are stored in line snapshots for future explanation.
 
-- Static frontend hosting serves the Vite build from `frontend/dist`.
-- A Node web service runs the compiled Express API from `backend/dist/server.js`.
-- Supabase Cloud hosts Postgres, Auth, RLS policies, and private Storage buckets.
+## Data Model
 
-The frontend receives only publishable Supabase and API URL values. The backend receives the publishable key and service role key, and CORS must allow the deployed frontend origin.
+```mermaid
+erDiagram
+  organizations ||--o{ profiles : contains
+  organizations ||--o{ user_roles : grants
+  organizations ||--o{ departments : owns
+  organizations ||--o{ work_locations : owns
+  organizations ||--o{ employees : employs
+  profiles ||--o| employees : links
+  employees ||--o{ salary_revisions : records
+  employees ||--o{ leave_requests : requests
+  employees ||--o{ attendance_entries : receives
+  organizations ||--o{ attendance_month_locks : locks
+  attendance_month_locks ||--o{ payroll_runs : sources
+  payroll_runs ||--o{ payroll_run_lines : contains
+  payroll_runs ||--o{ payroll_adjustments : applies
+  payroll_run_lines ||--o| payslips : publishes
+  organizations ||--o{ audit_logs : records
+```
 
-## Security Principles
+The chronological migration set in `supabase/migrations/` is the schema source of truth. `backend/src/lib/database.types.ts` is generated from the linked schema.
 
-- No service-role key in the frontend.
-- No role selection during signup.
-- RLS enabled on exposed Supabase tables.
-- Backend validates every request with Zod.
-- Payroll runs become immutable once finalized.
-- Every pay-impacting change writes an audit log entry.
-- Payslip downloads use RLS-checked access before creating signed Storage URLs.
-- Payroll export generation stays on the backend.
+## Security Layers
+
+1. **Configuration:** production fails fast without Supabase credentials or explicit trusted CORS origins.
+2. **HTTP:** Helmet, JSON-size limit, API rate limit, invitation-specific rate limit, generic 500 response.
+3. **Identity:** Supabase verifies the access token; the backend resolves profile, organization, and roles.
+4. **Validation:** Zod validates environment variables, route identifiers, query parameters, and request bodies.
+5. **Authorization:** routes and repositories enforce role and row scope.
+6. **Privileges:** `anon` has no public-table privileges; authenticated grants are least privilege.
+7. **RLS:** organization, manager, and employee visibility rules filter direct Data API reads.
+8. **Sensitive columns:** compensation and payment columns are not broadly granted to authenticated clients.
+9. **Database invariants:** lock/finalization triggers reject prohibited changes even from privileged code.
+10. **Private files:** photos and payslips use private buckets; payslip links are short-lived and access checked.
+11. **Audit:** pay-impacting and lifecycle operations write audit records.
+12. **Monitoring:** Sentry is optional and configured without default PII collection.
+
+## Organization Formatting Flow
+
+Country, currency, locale, and timezone are selected from curated options. The backend validates the saved values. They then affect:
+
+- currency rendering in the workspace and documents
+- localized dates on payslips and employee IDs
+- organization identity in generated documents
+- reporting-cutoff and local-time previews
+- default behavior when the country selection changes
+
+These preferences are operational configuration, not decorative profile fields.
+
+## Deployment Choices
+
+### Preferred: Vercel Plus Supabase
+
+The frontend and Express API deploy from one repository and domain. Same-origin `/api` calls avoid a separate production CORS hop.
+
+### Alternative: Vercel, Render, And Supabase
+
+Vercel serves the frontend; Render runs the compiled Express server. This preserves a long-running Node service and requires explicit cross-origin configuration.
+
+See `docs/DEPLOYMENT.md` for environment variables and smoke tests.
+
+## Extension Rules
+
+- Add country-specific compliance as separate tested policy modules, not conditionals spread through UI and repositories.
+- Add new write paths through a route schema, explicit role rule, repository method, audit event, and focused tests.
+- Add database fields through migrations, then regenerate types.
+- Preserve immutable payroll snapshots when changing calculations.
+- Keep public marketing routes and authenticated operational routes visually related but structurally separate.
+- Prefer splitting `App.tsx` by established domain boundaries when the next substantial feature is added; do not perform a risky rewrite only for aesthetics.

@@ -27,7 +27,7 @@ export function createPayrollRouter(
 ) {
   const router = Router()
 
-  router.post('/preview', (req, res) => {
+  router.post('/preview', requireAuth, (req, res) => {
     const result = payrollInputSchema.safeParse(req.body)
 
     if (!result.success) {

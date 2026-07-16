@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 
 const root = process.cwd()
 const outputDir = resolve(root, process.env.DEMO_SCREENSHOT_DIR ?? 'docs/screenshots')
-const appUrl = process.env.DEMO_APP_URL ?? 'http://127.0.0.1:5173/'
+const appUrl = process.env.DEMO_APP_URL ?? 'http://127.0.0.1:5173/app'
 const prefix = process.env.DEMO_SCREENSHOT_PREFIX ?? 'sign-in'
 const suppliedUserDataDir = process.env.CHROME_USER_DATA_DIR ? resolve(root, process.env.CHROME_USER_DATA_DIR) : ''
 const expectedText = process.env.DEMO_SCREENSHOT_EXPECT_TEXT ?? ''

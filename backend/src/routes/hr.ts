@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express'
 import multer from 'multer'
 import { postgresUuidSchema } from '../lib/validation.js'
 import { requireAuth } from '../modules/auth/auth-middleware.js'
+import { getEmployeeIdCardDocument } from '../modules/hr/employee-id-card-service.js'
 import {
   createHrMasterDataRepository,
   departmentArchiveSchema,
@@ -14,6 +15,7 @@ import {
   locationArchiveSchema,
   locationCreateSchema,
   locationUpdateSchema,
+  organizationUpdateSchema,
   salaryRevisionCreateSchema,
   type HrMasterDataRepository,
 } from '../modules/hr/hr-master-data-repository.js'
@@ -38,6 +40,23 @@ export function createHrRouter(repository: HrMasterDataRepository = createHrMast
     } catch (error) {
       console.error(error)
       res.status(500).json({ error: 'Unable to load HR master data' })
+    }
+  })
+
+  router.patch('/organization', requireAuth, async (req, res) => {
+    const parsed = organizationUpdateSchema.safeParse(req.body)
+
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid organization settings', details: parsed.error.flatten() })
+      return
+    }
+
+    try {
+      const result = await repository.updateOrganization(res.locals.auth?.userId, parsed.data)
+
+      sendWriteResponse(res, result, 'Supabase service role is not configured', 'Organization not found')
+    } catch (error) {
+      sendRouteError(res, error, 'Unable to update organization settings', 'Organization settings could not be saved')
     }
   })
 
@@ -81,6 +100,40 @@ export function createHrRouter(repository: HrMasterDataRepository = createHrMast
       sendWriteResponse(res, result, 'Supabase service role is not configured')
     } catch (error) {
       sendRouteError(res, error, 'Unable to upload employee photo', 'Employee photo already exists')
+    }
+  })
+
+  router.get('/employees/:employeeId/id-card', requireAuth, async (req, res) => {
+    const employeeId = postgresUuidSchema.safeParse(req.params.employeeId)
+
+    if (!employeeId.success) {
+      res.status(400).json({ error: 'Invalid employee id' })
+      return
+    }
+
+    try {
+      const result = await getEmployeeIdCardDocument(
+        employeeId.data,
+        res.locals.auth?.accessToken,
+        res.locals.auth?.userId,
+      )
+
+      if (result.status === 'not_configured') {
+        res.status(501).json({ error: 'Supabase document service is not configured' })
+        return
+      }
+
+      if (result.status === 'not_found') {
+        res.status(404).json({ error: 'Employee not found or not visible to this account' })
+        return
+      }
+
+      res.setHeader('Cache-Control', 'private, no-store')
+      res.setHeader('Content-Disposition', `attachment; filename="${result.data.filename}"`)
+      res.type('application/pdf').send(result.data.pdf)
+    } catch (error) {
+      console.error(error)
+      res.status(500).json({ error: 'Unable to generate employee ID card' })
     }
   })
 

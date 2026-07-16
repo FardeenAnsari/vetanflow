@@ -6,17 +6,18 @@ Use this before and after live demos so the project stays clean.
 
 - Confirm `backend/.env` and `frontend/.env` point to the intended Supabase project.
 - Run `npm run verify`.
-- Run `npm run demo:reset` when the Supabase project should return to the clean September 2026 walkthrough state.
-- Run `npm run demo:prepare` when the Supabase project only needs missing walkthrough data filled in.
-- Run `npm run demo:check`.
-- Confirm owner/admin and employee demo accounts can sign in.
+- Run `npm run demo:bootstrap` to idempotently seed 12 role users, master data, and the previous six payroll months.
+- Run `npm run demo:reset` only when the showcase organization's transactional records and payslip files should be deleted and rebuilt.
+- Run `npm run demo:check` and `npm run demo:check-logins`.
+- Confirm all 12 role accounts can sign in.
 - Confirm the employee account links to one employee profile.
 - Confirm at least one active employee has complete bank details.
-- Confirm the current demo month has attendance entries and a locked attendance month.
-- Confirm one payroll run is finalized.
-- Generate payslips for the finalized run.
-- Confirm Bank CSV, Statutory CSV, Department Cost CSV, and payslip download all work.
-- In the Payroll runs list, use the prepared `2026-09-01` to `2026-09-30` run for the walkthrough.
+- Confirm the current month has open attendance examples and both historical demo months are locked.
+- Confirm the previous six payroll runs are finalized with published payslips.
+- Confirm owner can download at least two different employee ID PDFs.
+- Confirm an employee can download their own ID and receives `404` for another employee ID.
+- Confirm Bank CSV, Deductions CSV, Department Cost CSV, and payslip download all work.
+- In Payroll, use the previous calendar month as the current close and the month before it for variance comparison.
 
 ## During A Demo
 
@@ -26,22 +27,23 @@ Use this before and after live demos so the project stays clean.
 
 ## After A Demo
 
-- Run `npm run demo:reset` when you want to remove temporary walkthrough records and rebuild the standard demo month.
+- Run `npm run demo:bootstrap` to repair missing showcase records without deleting history.
+- Run `npm run demo:reset` only when a complete destructive rebuild is intended.
 - Confirm the employee demo account still sees only its own self-service page.
 - Run `npm run verify`.
 
 ## Remote Database Safety
 
-Do cleanup from a trusted machine. `npm run demo:reset` uses the linked Supabase project and project-local SQL reset file, then runs `npm run demo:prepare`. Do not run it against a shared production database.
+Do cleanup from a trusted machine. `npm run demo:reset` removes the showcase organization's payslip objects, uses the linked Supabase project and project-local SQL reset file, then runs the full bootstrap. Both cleanup steps verify the fixed organization ID belongs to `VetanFlow Labs`. Never run it against a shared production database.
 
 If you create throwaway records manually, keep their IDs in a scratch note during the demo. That makes cleanup boring, which is exactly what you want.
 
 ## Readiness Check Output
 
-`npm run demo:check` exits with a non-zero status when a required demo condition is missing. By default, `demo:prepare` and `demo:check` use `DEMO_PERIOD_MONTH=2026-09-01`; override that env var when you want another month. Treat failures as setup work, not script failures. Typical required conditions:
+`npm run demo:check` exits with a non-zero status when a required demo condition is missing. By default, `demo:prepare` and `demo:check` use the previous calendar month; override `DEMO_PERIOD_MONTH=YYYY-MM-01` for another month. Treat failures as setup work, not script failures. Typical required conditions:
 
 - At least one organization exists.
-- Owner/admin, checker, and employee roles exist.
+- Owner, admin, HR, finance, manager, and employee roles exist.
 - At least one active employee links to an auth profile.
 - At least one active employee has complete bank details.
 - Attendance entries exist for the demo month.
@@ -50,3 +52,5 @@ If you create throwaway records manually, keep their IDs in a scratch note durin
 - The private `payslips` bucket exists.
 
 Warnings point to a weaker demo, such as missing generated payslips for the latest finalized run. Fix warnings before recording the final walkthrough.
+
+`npm run demo:check-logins` signs in all 12 accounts from the ignored `.tmp/demo-credentials.json` file and verifies that HR, leave, payroll-run, payslip, and employee-ID visibility matches each role.

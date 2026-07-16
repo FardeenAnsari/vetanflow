@@ -2,16 +2,19 @@ import { z } from 'zod'
 
 export const payrollInputSchema = z.object({
   employeeId: z.string().min(1),
-  annualCtc: z.number().nonnegative(),
+  annualCompensation: z.number().nonnegative(),
   unpaidLeaveDays: z.number().min(0).default(0),
   payableDays: z.number().positive().default(30),
   overtimeAmount: z.number().nonnegative().default(0),
   bonusAmount: z.number().nonnegative().default(0),
   taxableEarningsAmount: z.number().nonnegative().default(0),
   reimbursementAmount: z.number().nonnegative().default(0),
+  retirementContributionAmount: z.number().nonnegative().default(0),
+  socialInsuranceAmount: z.number().nonnegative().default(0),
+  localPayrollTaxAmount: z.number().nonnegative().default(0),
   preTaxDeductionAmount: z.number().nonnegative().default(0),
   postTaxDeductionAmount: z.number().nonnegative().default(0),
-  tdsAmount: z.number().nonnegative().default(0),
+  withholdingTaxAmount: z.number().nonnegative().default(0),
 })
 
 export type PayrollInput = z.input<typeof payrollInputSchema>
@@ -19,18 +22,15 @@ export type PayrollInput = z.input<typeof payrollInputSchema>
 export type PayrollPreview = {
   employeeId: string
   grossMonthly: number
-  basic: number
-  hra: number
-  specialAllowance: number
   unpaidLeaveDeduction: number
-  employeePf: number
-  employeeEsi: number
-  professionalTax: number
+  retirementContributionAmount: number
+  socialInsuranceAmount: number
+  localPayrollTaxAmount: number
   preTaxDeductionAmount: number
   postTaxDeductionAmount: number
   reimbursementAmount: number
   taxableEarningsAmount: number
-  tdsAmount: number
+  withholdingTaxAmount: number
   totalEarnings: number
   totalDeductions: number
   netPay: number
@@ -43,18 +43,18 @@ export type PayrollPreview = {
   }
   deductions: {
     unpaidLeave: number
-    employeePf: number
-    employeeEsi: number
-    professionalTax: number
+    retirementContribution: number
+    socialInsurance: number
+    localPayrollTax: number
     preTaxAdjustments: number
     postTaxAdjustments: number
-    tds: number
+    withholdingTax: number
   }
-  statutory: {
-    employeePf: number
-    employeeEsi: number
-    professionalTax: number
-    tds: number
+  deductionSummary: {
+    retirementContribution: number
+    socialInsurance: number
+    localPayrollTax: number
+    withholdingTax: number
   }
 }
 
@@ -64,15 +64,9 @@ function roundMoney(value: number) {
 
 export function calculatePayrollPreview(input: PayrollInput): PayrollPreview {
   const parsed = payrollInputSchema.parse(input)
-  const grossMonthly = parsed.annualCtc / 12
-  const basic = grossMonthly * 0.5
-  const hra = basic * 0.4
-  const specialAllowance = grossMonthly - basic - hra
+  const grossMonthly = parsed.annualCompensation / 12
   const dailyRate = grossMonthly / parsed.payableDays
   const unpaidLeaveDeduction = dailyRate * parsed.unpaidLeaveDays
-  const employeePf = Math.min(basic * 0.12, 1800)
-  const employeeEsi = grossMonthly <= 21000 ? grossMonthly * 0.0075 : 0
-  const professionalTax = grossMonthly > 10000 ? 200 : 0
   const totalEarnings =
     grossMonthly +
     parsed.overtimeAmount +
@@ -81,37 +75,34 @@ export function calculatePayrollPreview(input: PayrollInput): PayrollPreview {
     parsed.reimbursementAmount
   const totalDeductions =
     unpaidLeaveDeduction +
-    employeePf +
-    employeeEsi +
-    professionalTax +
+    parsed.retirementContributionAmount +
+    parsed.socialInsuranceAmount +
+    parsed.localPayrollTaxAmount +
     parsed.preTaxDeductionAmount +
     parsed.postTaxDeductionAmount +
-    parsed.tdsAmount
-  const roundedEmployeePf = roundMoney(employeePf)
-  const roundedEmployeeEsi = roundMoney(employeeEsi)
-  const roundedProfessionalTax = roundMoney(professionalTax)
+    parsed.withholdingTaxAmount
+  const roundedRetirementContribution = roundMoney(parsed.retirementContributionAmount)
+  const roundedSocialInsurance = roundMoney(parsed.socialInsuranceAmount)
+  const roundedLocalPayrollTax = roundMoney(parsed.localPayrollTaxAmount)
   const roundedUnpaidLeaveDeduction = roundMoney(unpaidLeaveDeduction)
   const roundedReimbursementAmount = roundMoney(parsed.reimbursementAmount)
   const roundedTaxableEarningsAmount = roundMoney(parsed.taxableEarningsAmount)
   const roundedPreTaxDeductionAmount = roundMoney(parsed.preTaxDeductionAmount)
   const roundedPostTaxDeductionAmount = roundMoney(parsed.postTaxDeductionAmount)
-  const roundedTdsAmount = roundMoney(parsed.tdsAmount)
+  const roundedWithholdingTaxAmount = roundMoney(parsed.withholdingTaxAmount)
 
   return {
     employeeId: parsed.employeeId,
     grossMonthly: roundMoney(grossMonthly),
-    basic: roundMoney(basic),
-    hra: roundMoney(hra),
-    specialAllowance: roundMoney(specialAllowance),
     unpaidLeaveDeduction: roundedUnpaidLeaveDeduction,
-    employeePf: roundedEmployeePf,
-    employeeEsi: roundedEmployeeEsi,
-    professionalTax: roundedProfessionalTax,
+    retirementContributionAmount: roundedRetirementContribution,
+    socialInsuranceAmount: roundedSocialInsurance,
+    localPayrollTaxAmount: roundedLocalPayrollTax,
     preTaxDeductionAmount: roundedPreTaxDeductionAmount,
     postTaxDeductionAmount: roundedPostTaxDeductionAmount,
     reimbursementAmount: roundedReimbursementAmount,
     taxableEarningsAmount: roundedTaxableEarningsAmount,
-    tdsAmount: roundedTdsAmount,
+    withholdingTaxAmount: roundedWithholdingTaxAmount,
     totalEarnings: roundMoney(totalEarnings),
     totalDeductions: roundMoney(totalDeductions),
     netPay: roundMoney(totalEarnings - totalDeductions),
@@ -124,18 +115,18 @@ export function calculatePayrollPreview(input: PayrollInput): PayrollPreview {
     },
     deductions: {
       unpaidLeave: roundedUnpaidLeaveDeduction,
-      employeePf: roundedEmployeePf,
-      employeeEsi: roundedEmployeeEsi,
-      professionalTax: roundedProfessionalTax,
+      retirementContribution: roundedRetirementContribution,
+      socialInsurance: roundedSocialInsurance,
+      localPayrollTax: roundedLocalPayrollTax,
       preTaxAdjustments: roundedPreTaxDeductionAmount,
       postTaxAdjustments: roundedPostTaxDeductionAmount,
-      tds: roundedTdsAmount,
+      withholdingTax: roundedWithholdingTaxAmount,
     },
-    statutory: {
-      employeePf: roundedEmployeePf,
-      employeeEsi: roundedEmployeeEsi,
-      professionalTax: roundedProfessionalTax,
-      tds: roundedTdsAmount,
+    deductionSummary: {
+      retirementContribution: roundedRetirementContribution,
+      socialInsurance: roundedSocialInsurance,
+      localPayrollTax: roundedLocalPayrollTax,
+      withholdingTax: roundedWithholdingTaxAmount,
     },
   }
 }

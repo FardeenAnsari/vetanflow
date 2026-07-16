@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 352 80" role="img" aria-labelledby="title desc">
+  <title id="title">VetanFlow</title>
+  <desc id="desc">VetanFlow brand mark and wordmark.</desc>
+  <g transform="translate(8 8)">
+    <rect width="64" height="64" rx="12" fill="#0A2947"/>
+    <path d="M14 17.5 27.2 46c1.8 3.8 7.2 3.8 9 0L50 17.5h-9.2l-9 20.1-8.7-20.1Z" fill="#F3E4C9"/>
+    <path d="M19 24.5h26" fill="none" stroke="#39A96B" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="44.5" cy="24.5" r="3.5" fill="#F3E4C9"/>
+  </g>
+  <text x="92" y="52" fill="#0A2947" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="700">VetanFlow</text>
+</svg>
