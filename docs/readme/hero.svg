@@ -1,0 +1,202 @@
+<svg width="1400" height="640" viewBox="0 0 1400 640" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">VetanFlow payroll operations animation</title>
+  <desc id="desc">An animated architecture flow showing employee data, attendance locks, payroll engine, payslips, and exports.</desc>
+  <style>
+    :root {
+      --navy: #0A2947;
+      --cream: #F3E4C9;
+      --sage: #D3D4C0;
+      --brown: #8B5E3C;
+      --ink: #10263d;
+      --line: rgba(10, 41, 71, 0.35);
+    }
+
+    .bg { fill: url(#bg); }
+    .panel { fill: rgba(255, 255, 255, 0.78); stroke: rgba(10, 41, 71, 0.18); stroke-width: 1.5; }
+    .panel-dark { fill: #0A2947; }
+    .title { fill: #0A2947; font: 800 62px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
+    .subtitle { fill: rgba(10, 41, 71, 0.78); font: 500 23px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .small { fill: rgba(10, 41, 71, 0.68); font: 600 17px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .tiny { fill: rgba(10, 41, 71, 0.58); font: 500 13px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .label-light { fill: #F3E4C9; font: 800 24px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .small-light { fill: rgba(243, 228, 201, 0.78); font: 600 15px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .node-title { fill: #0A2947; font: 800 20px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .node-copy { fill: rgba(10, 41, 71, 0.66); font: 600 14px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .track { stroke: rgba(10, 41, 71, 0.25); stroke-width: 5; stroke-linecap: round; }
+    .pulse-line { stroke: #8B5E3C; stroke-width: 5; stroke-linecap: round; stroke-dasharray: 18 18; animation: dash 3.4s linear infinite; }
+    .pulse-line.delay { animation-delay: -1.2s; }
+    .pulse-line.delay-two { animation-delay: -2.2s; }
+    .glow { filter: url(#glow); }
+    .float-a { animation: floatA 7s ease-in-out infinite; }
+    .float-b { animation: floatB 8s ease-in-out infinite; }
+    .float-c { animation: floatC 9s ease-in-out infinite; }
+    .beat { transform-origin: center; animation: beat 2.6s ease-in-out infinite; }
+    .beat.delay { animation-delay: -1.3s; }
+    .meter-a { animation: growA 4.6s ease-in-out infinite; transform-origin: 0 100%; transform-box: fill-box; }
+    .meter-b { animation: growB 5.2s ease-in-out infinite; transform-origin: 0 100%; transform-box: fill-box; }
+    .meter-c { animation: growC 4.9s ease-in-out infinite; transform-origin: 0 100%; transform-box: fill-box; }
+
+    @keyframes dash {
+      from { stroke-dashoffset: 72; }
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes floatA {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+    @keyframes floatB {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(10px); }
+    }
+    @keyframes floatC {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes beat {
+      0%, 100% { transform: scale(1); opacity: 0.72; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+    @keyframes growA {
+      0%, 100% { transform: scaleY(0.45); }
+      50% { transform: scaleY(1); }
+    }
+    @keyframes growB {
+      0%, 100% { transform: scaleY(0.72); }
+      50% { transform: scaleY(0.38); }
+    }
+    @keyframes growC {
+      0%, 100% { transform: scaleY(0.55); }
+      50% { transform: scaleY(0.9); }
+    }
+  </style>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F3E4C9"/>
+      <stop offset="0.52" stop-color="#D3D4C0"/>
+      <stop offset="1" stop-color="#F8F3E8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#0A2947" flood-opacity="0.16"/>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.545 0 0 0 0 0.369 0 0 0 0 0.235 0 0 0 0.7 0" result="color"/>
+      <feMerge>
+        <feMergeNode in="color"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="screenClip">
+      <rect x="705" y="170" width="500" height="318" rx="24"/>
+    </clipPath>
+  </defs>
+
+  <rect class="bg" width="1400" height="640" rx="34"/>
+
+  <circle cx="106" cy="102" r="58" fill="#0A2947" opacity="0.08" class="float-a"/>
+  <circle cx="1262" cy="116" r="72" fill="#8B5E3C" opacity="0.1" class="float-b"/>
+  <circle cx="1220" cy="536" r="96" fill="#0A2947" opacity="0.07" class="float-c"/>
+
+  <text x="90" y="110" class="title">VetanFlow</text>
+  <text x="94" y="152" class="subtitle">India-first payroll operations, from HR records to signed payslips.</text>
+
+  <g transform="translate(94 198)" filter="url(#shadow)">
+    <rect width="520" height="332" rx="28" class="panel"/>
+    <rect x="28" y="28" width="136" height="44" rx="22" fill="#0A2947"/>
+    <text x="48" y="57" class="small-light">Month close</text>
+    <text x="30" y="112" class="node-title">Built as an operating system</text>
+    <text x="30" y="145" class="node-copy">Auth, RLS, approvals, locks, payroll snapshots,</text>
+    <text x="30" y="169" class="node-copy">private documents, exports, and demo automation.</text>
+
+    <g transform="translate(30 212)">
+      <rect width="110" height="78" rx="16" fill="#0A2947" opacity="0.94"/>
+      <rect x="18" y="18" width="74" height="8" rx="4" fill="#F3E4C9"/>
+      <rect x="18" y="36" width="52" height="8" rx="4" fill="#D3D4C0"/>
+      <rect x="18" y="54" width="62" height="8" rx="4" fill="#8B5E3C"/>
+      <text x="0" y="108" class="tiny">HR master data</text>
+    </g>
+
+    <g transform="translate(190 212)">
+      <rect width="110" height="78" rx="16" fill="#F8F3E8" stroke="#0A2947" stroke-opacity="0.18"/>
+      <rect x="23" y="18" width="64" height="42" rx="8" fill="#D3D4C0"/>
+      <path d="M35 30h40M35 42h30M35 54h36" stroke="#0A2947" stroke-width="5" stroke-linecap="round"/>
+      <text x="5" y="108" class="tiny">Attendance lock</text>
+    </g>
+
+    <g transform="translate(350 212)">
+      <rect width="110" height="78" rx="16" fill="#8B5E3C" opacity="0.94"/>
+      <rect x="24" y="18" width="62" height="42" rx="8" fill="#F3E4C9"/>
+      <path d="M38 31h34M38 43h30M38 55h24" stroke="#0A2947" stroke-width="5" stroke-linecap="round"/>
+      <text x="8" y="108" class="tiny">Payslip vault</text>
+    </g>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="705" y="170" width="500" height="318" rx="24" fill="#0A2947"/>
+    <rect x="725" y="190" width="460" height="278" rx="18" fill="#F8F3E8"/>
+    <g clip-path="url(#screenClip)">
+      <rect x="725" y="190" width="460" height="62" fill="#0A2947"/>
+      <text x="752" y="229" class="label-light">Payroll command center</text>
+      <circle cx="1140" cy="220" r="8" fill="#D3D4C0" class="beat"/>
+      <circle cx="1164" cy="220" r="8" fill="#8B5E3C" class="beat delay"/>
+
+      <rect x="752" y="276" width="122" height="78" rx="16" fill="#FFFFFF" stroke="#0A2947" stroke-opacity="0.12"/>
+      <text x="772" y="307" class="small">Gross</text>
+      <text x="772" y="337" class="node-title">3.49L</text>
+
+      <rect x="902" y="276" width="122" height="78" rx="16" fill="#FFFFFF" stroke="#0A2947" stroke-opacity="0.12"/>
+      <text x="922" y="307" class="small">Net</text>
+      <text x="922" y="337" class="node-title">2.92L</text>
+
+      <rect x="1052" y="276" width="106" height="78" rx="16" fill="#FFFFFF" stroke="#0A2947" stroke-opacity="0.12"/>
+      <text x="1072" y="307" class="small">Checks</text>
+      <text x="1072" y="337" class="node-title">0</text>
+
+      <rect x="756" y="392" width="82" height="38" rx="10" fill="#0A2947"/>
+      <rect x="858" y="362" width="82" height="68" rx="10" fill="#8B5E3C" class="meter-a"/>
+      <rect x="960" y="382" width="82" height="48" rx="10" fill="#D3D4C0" class="meter-b"/>
+      <rect x="1062" y="344" width="82" height="86" rx="10" fill="#0A2947" class="meter-c"/>
+      <path d="M756 430H1144" stroke="#0A2947" stroke-opacity="0.18" stroke-width="3"/>
+    </g>
+  </g>
+
+  <path class="track" d="M544 316C612 316 626 300 690 300"/>
+  <path class="pulse-line" d="M544 316C612 316 626 300 690 300"/>
+  <path class="track" d="M946 488C946 540 1014 558 1082 558"/>
+  <path class="pulse-line delay" d="M946 488C946 540 1014 558 1082 558"/>
+  <path class="track" d="M1205 330C1270 330 1288 374 1288 438"/>
+  <path class="pulse-line delay-two" d="M1205 330C1270 330 1288 374 1288 438"/>
+
+  <circle r="11" fill="#8B5E3C" class="glow">
+    <animateMotion dur="3.4s" repeatCount="indefinite" path="M544 316C612 316 626 300 690 300"/>
+  </circle>
+  <circle r="10" fill="#0A2947" class="glow">
+    <animateMotion dur="4s" repeatCount="indefinite" path="M946 488C946 540 1014 558 1082 558"/>
+  </circle>
+  <circle r="10" fill="#8B5E3C" class="glow">
+    <animateMotion dur="4.4s" repeatCount="indefinite" path="M1205 330C1270 330 1288 374 1288 438"/>
+  </circle>
+
+  <g transform="translate(1088 520)" filter="url(#shadow)">
+    <rect width="220" height="80" rx="20" class="panel"/>
+    <text x="24" y="34" class="node-title">Exports</text>
+    <text x="24" y="60" class="node-copy">Bank CSV, statutory, cost</text>
+  </g>
+
+  <g transform="translate(1230 430)" filter="url(#shadow)">
+    <rect width="132" height="96" rx="20" class="panel"/>
+    <text x="26" y="38" class="node-title">RLS</text>
+    <text x="20" y="64" class="node-copy">Role-aware</text>
+    <text x="20" y="84" class="node-copy">data access</text>
+  </g>
+
+  <g transform="translate(94 560)">
+    <rect width="220" height="38" rx="19" fill="#0A2947"/>
+    <text x="24" y="25" class="small-light">React + Express + Supabase</text>
+    <rect x="238" width="178" height="38" rx="19" fill="#8B5E3C"/>
+    <text x="260" y="25" class="small-light">Maker-checker payroll</text>
+    <rect x="434" width="186" height="38" rx="19" fill="#FFFFFF" stroke="#0A2947" stroke-opacity="0.18"/>
+    <text x="456" y="25" class="small">Private documents</text>
+  </g>
+</svg>
