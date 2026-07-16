@@ -1,0 +1,597 @@
+{
+  ".codex/hooks.json": {
+    "mtime": 1783106760.3003452,
+    "ast_hash": "445afbdbaa4f7bc0b68ebf568886abcd",
+    "semantic_hash": ""
+  },
+  ".husky/_/applypatch-msg": {
+    "mtime": 1783137964.3007553,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/commit-msg": {
+    "mtime": 1783137964.3006115,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/h": {
+    "mtime": 1783137964.3000636,
+    "ast_hash": "15239a01c5554e56ff745570fb583a91",
+    "semantic_hash": ""
+  },
+  ".husky/_/husky.sh": {
+    "mtime": 1783137964.301449,
+    "ast_hash": "13871d2ab13e8423790ecb2c01c78c18",
+    "semantic_hash": ""
+  },
+  ".husky/_/post-applypatch": {
+    "mtime": 1783137964.3009062,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/post-checkout": {
+    "mtime": 1783137964.3011436,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/post-commit": {
+    "mtime": 1783137964.300685,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/post-merge": {
+    "mtime": 1783137964.3012338,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/post-rewrite": {
+    "mtime": 1783137964.301067,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/pre-applypatch": {
+    "mtime": 1783137964.300825,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/pre-auto-gc": {
+    "mtime": 1783137964.3013732,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/pre-commit": {
+    "mtime": 1783137964.3002543,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/pre-merge-commit": {
+    "mtime": 1783137964.3003566,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/pre-push": {
+    "mtime": 1783137964.3013053,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/pre-rebase": {
+    "mtime": 1783137964.3009853,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".husky/_/prepare-commit-msg": {
+    "mtime": 1783137964.3004339,
+    "ast_hash": "0b71c2e7d39daa010985d529f1320b37",
+    "semantic_hash": ""
+  },
+  ".lintstagedrc.json": {
+    "mtime": 1783106924.418897,
+    "ast_hash": "45614d58bccd87618cef0899a8c3ea70",
+    "semantic_hash": ""
+  },
+  "backend/package.json": {
+    "mtime": 1783166901.0089054,
+    "ast_hash": "3d87b0fa1bd279da0d2fe20739aec922",
+    "semantic_hash": ""
+  },
+  "backend/src/app.test.ts": {
+    "mtime": 1784150137.1390643,
+    "ast_hash": "c064d0588db02be0ec9006a1c5320130",
+    "semantic_hash": ""
+  },
+  "backend/src/app.ts": {
+    "mtime": 1783187661.69043,
+    "ast_hash": "467c1bd206eaeeb2457f630e9bd86383",
+    "semantic_hash": ""
+  },
+  "backend/src/config/env.ts": {
+    "mtime": 1783136828.2506788,
+    "ast_hash": "4fec9194dae64ccc8251930ff87844fe",
+    "semantic_hash": ""
+  },
+  "backend/src/lib/database.types.ts": {
+    "mtime": 1784150722.0386012,
+    "ast_hash": "081c1424ee61e81b34227e89b1fc0ce1",
+    "semantic_hash": ""
+  },
+  "backend/src/lib/supabase.ts": {
+    "mtime": 1783158159.2061148,
+    "ast_hash": "95b0eab4f94c83608c6cd1d4a1dd9bb9",
+    "semantic_hash": ""
+  },
+  "backend/src/lib/validation.ts": {
+    "mtime": 1783137068.9563556,
+    "ast_hash": "892a0dcd0213158be5ad497481f32cc4",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auth/auth-context.ts": {
+    "mtime": 1783136794.17662,
+    "ast_hash": "52e30bae9ffbfcaa8896e2d2543cdcc5",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auth/auth-middleware.ts": {
+    "mtime": 1783136794.176777,
+    "ast_hash": "c93590b7b349f9ebdf565b5c032d3fc1",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auth/roles.ts": {
+    "mtime": 1783137023.00121,
+    "ast_hash": "22c37216ca712cad7e7224ad28aa15ae",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/employees/employee-repository.ts": {
+    "mtime": 1783146345.5764952,
+    "ast_hash": "79387a5d0c176e60f25226ccff1cfb09",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/employees/sample-data.ts": {
+    "mtime": 1783136814.4877086,
+    "ast_hash": "c7ad10075aa16977f8e318b259fae6dd",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/hr/hr-master-data-repository.ts": {
+    "mtime": 1784149991.6695147,
+    "ast_hash": "271c1aad819b868711f338b42b2575c7",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/invitations/invitation-service.ts": {
+    "mtime": 1783137068.9575138,
+    "ast_hash": "6c56f021903b1e6b96fb4f99ee1c9419",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/calculate-payroll.test.ts": {
+    "mtime": 1783265017.9814417,
+    "ast_hash": "ce96408dc60b619124012b95d3750841",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/calculate-payroll.ts": {
+    "mtime": 1783265050.6436214,
+    "ast_hash": "56e3f9f1616f3f45ec0cf4e9e6c16392",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/employees.ts": {
+    "mtime": 1783137023.0049384,
+    "ast_hash": "f95de2ab9e134b5766198635c6927703",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/health.ts": {
+    "mtime": 1783103818.9614058,
+    "ast_hash": "6f08bcce9c398aa328ccf8de9c87aa8b",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/hr.ts": {
+    "mtime": 1783168285.9671388,
+    "ast_hash": "2478ea8838c5f01d3207e8b98492dcea",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/invitations.ts": {
+    "mtime": 1783136794.17714,
+    "ast_hash": "fa2e15ea2fb69074ec33b7baab7d76a1",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/payroll.ts": {
+    "mtime": 1784150279.9418201,
+    "ast_hash": "6035a096955614339b73156093768f68",
+    "semantic_hash": ""
+  },
+  "backend/src/server.ts": {
+    "mtime": 1783108366.9101872,
+    "ast_hash": "559105fecaff5085909a9a9bbedbcbbb",
+    "semantic_hash": ""
+  },
+  "backend/tsconfig.json": {
+    "mtime": 1783104100.9267273,
+    "ast_hash": "0254383070cbe64923b1bcae31abcc79",
+    "semantic_hash": ""
+  },
+  "backend/vitest.config.ts": {
+    "mtime": 1783104100.927608,
+    "ast_hash": "4c535d98248dc5e03777a4288e3f1ef2",
+    "semantic_hash": ""
+  },
+  "frontend/.oxlintrc.json": {
+    "mtime": 1783103685.5213048,
+    "ast_hash": "029f4905006c1fffd96bc863e2d98d3e",
+    "semantic_hash": ""
+  },
+  "frontend/package.json": {
+    "mtime": 1783159331.5233972,
+    "ast_hash": "379bc58958ffa5830221897c71f5b8eb",
+    "semantic_hash": ""
+  },
+  "frontend/src/App.tsx": {
+    "mtime": 1784150267.4287374,
+    "ast_hash": "a677f63d0f10f1330510efcdb0eb7fa4",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/Folder.tsx": {
+    "mtime": 1783156802.1699116,
+    "ast_hash": "c2132908896adfd3b7ca1f14e68f02ae",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/supabase.ts": {
+    "mtime": 1783136893.8745468,
+    "ast_hash": "c22d052059fe77e8af582ae1410581e9",
+    "semantic_hash": ""
+  },
+  "frontend/src/main.tsx": {
+    "mtime": 1783103685.5231214,
+    "ast_hash": "787e5a07efeb2bf6209d5937195f2f68",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.app.json": {
+    "mtime": 1783103685.5232308,
+    "ast_hash": "5f2dafd737dea8a4ddcbb10f5113ac5a",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.json": {
+    "mtime": 1783103938.6203759,
+    "ast_hash": "3bbc383561e56ba13bc0e74074fb320c",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.node.json": {
+    "mtime": 1783103685.5234382,
+    "ast_hash": "f9cb81ddcea69ffdab672fc8c48dca66",
+    "semantic_hash": ""
+  },
+  "frontend/vite.config.ts": {
+    "mtime": 1783103938.6201968,
+    "ast_hash": "5b641ab5f85eff4b0b9acec3417ca9b5",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1783137956.6133876,
+    "ast_hash": "783132ee9ce7daa62791b6967ee8b0dc",
+    "semantic_hash": ""
+  },
+  "scripts/update-handoff.mjs": {
+    "mtime": 1783106924.4194586,
+    "ast_hash": "fee3a2c40f4781cff32a0a9b2319bd27",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/0001_initial_schema.sql": {
+    "mtime": 1783103818.9624178,
+    "ast_hash": "3a223e6c1f1c35b6a0b10e7b4e1a19d1",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260703195145_add_data_api_grants_and_read_policies.sql": {
+    "mtime": 1783108366.9132774,
+    "ast_hash": "e26fda109c3becab5323003315230c0c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704034844_harden_employee_rls_for_roles.sql": {
+    "mtime": 1783136969.9124315,
+    "ast_hash": "00aef12d78def426bd2ea006f3a0e7c5",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704041736_fix_advisors_indexes_and_rls_trigger_permissions.sql": {
+    "mtime": 1783138665.9065998,
+    "ast_hash": "4fc45b13465301f7b74564e0da5cb247",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704062019_add_hr_master_data.sql": {
+    "mtime": 1783146071.9180367,
+    "ast_hash": "514c5913ad05b02794ffbe97538bc6ee",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704062244_add_salary_revision_created_by_index.sql": {
+    "mtime": 1783146173.0601807,
+    "ast_hash": "70b7a72ace56264e4c8d41794ad87639",
+    "semantic_hash": ""
+  },
+  "supabase/seed/demo.sql": {
+    "mtime": 1783146094.5042977,
+    "ast_hash": "a55a1aeab86a1b795ffc87c3276cb46d",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/SKILL.md": {
+    "mtime": 1783106760.297011,
+    "ast_hash": "21f78a7f96e2f9aecc0f7afc053bd3cc",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/add-watch.md": {
+    "mtime": 1783106745.9194334,
+    "ast_hash": "d59d027fe449f06aa03905a01184e779",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/exports.md": {
+    "mtime": 1783106745.9195364,
+    "ast_hash": "9da2a2152e60a22f07f05fed5158f287",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/extraction-spec.md": {
+    "mtime": 1783106745.9196799,
+    "ast_hash": "bf895ec4d4e40f5f66f7d31c2a9bd4a7",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/github-and-merge.md": {
+    "mtime": 1783106745.9197767,
+    "ast_hash": "cde13df085e4c492aeb7ba298a996d0d",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/hooks.md": {
+    "mtime": 1783106745.919867,
+    "ast_hash": "3f545db6ce646650bb9de588f5512a27",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/query.md": {
+    "mtime": 1783106745.9200478,
+    "ast_hash": "9e5aadc2c57ab561bc56600fcfa70735",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/transcribe.md": {
+    "mtime": 1783106745.9201503,
+    "ast_hash": "67b6a5fa6c0974e18f60db9f8932fbd8",
+    "semantic_hash": ""
+  },
+  ".codex/skills/graphify/references/update.md": {
+    "mtime": 1783106745.9202855,
+    "ast_hash": "c698309979460d0f02ba616417844399",
+    "semantic_hash": ""
+  },
+  ".github/workflows/ci.yml": {
+    "mtime": 1783103818.962738,
+    "ast_hash": "3e4128e863edc52512d4d8ae1ef296ee",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1783267188.589553,
+    "ast_hash": "69fbed4a677646cfd2895c62d238e637",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1783137956.615563,
+    "ast_hash": "692fca4c3b452145d9e8e100598f9d65",
+    "semantic_hash": ""
+  },
+  "docs/ARCHITECTURE.md": {
+    "mtime": 1783268207.689668,
+    "ast_hash": "f20080a854fba26752971b39d66707fa",
+    "semantic_hash": ""
+  },
+  "docs/AUTOMATION.md": {
+    "mtime": 1783137132.1445684,
+    "ast_hash": "2105b84e4eee7e0178b3a8fe3d4ea6c5",
+    "semantic_hash": ""
+  },
+  "docs/GRAPHIFY.md": {
+    "mtime": 1783107175.1026003,
+    "ast_hash": "53db11b51e45417e5611591f71fdec1c",
+    "semantic_hash": ""
+  },
+  "docs/HANDOFF.md": {
+    "mtime": 1784151153.31689,
+    "ast_hash": "d9a3baa8109ca2f40916e13ba4392194",
+    "semantic_hash": ""
+  },
+  "docs/PHASES.md": {
+    "mtime": 1784151035.2500248,
+    "ast_hash": "6adebbffab7002a584703d66520afe67",
+    "semantic_hash": ""
+  },
+  "docs/PLAN.md": {
+    "mtime": 1783137956.6186824,
+    "ast_hash": "1516c304101347bc28cc195c91864b87",
+    "semantic_hash": ""
+  },
+  "docs/SUPABASE_CLOUD_SETUP.md": {
+    "mtime": 1783137956.6198199,
+    "ast_hash": "6adeb8b3d1f78b22eb6819e5ac308001",
+    "semantic_hash": ""
+  },
+  "docs/UI_DIRECTION.md": {
+    "mtime": 1783103818.9604888,
+    "ast_hash": "4930208f2ddcfe29fb2b2c15d88ec513",
+    "semantic_hash": ""
+  },
+  "frontend/README.md": {
+    "mtime": 1783137956.625756,
+    "ast_hash": "4638ddd328f5349ed08ac9446703263b",
+    "semantic_hash": ""
+  },
+  "frontend/index.html": {
+    "mtime": 1783137956.6238399,
+    "ast_hash": "dfd3738f023f6cbda3a3a7b67eae2287",
+    "semantic_hash": ""
+  },
+  "requirements-dev.txt": {
+    "mtime": 1783106924.4187577,
+    "ast_hash": "22336c9986fc732dd43f1e1d2d5b042c",
+    "semantic_hash": ""
+  },
+  "frontend/public/favicon.svg": {
+    "mtime": 1783103685.521833,
+    "ast_hash": "7e840862161341271697daa99a40d76b",
+    "semantic_hash": ""
+  },
+  "frontend/public/icons.svg": {
+    "mtime": 1783103685.5220213,
+    "ast_hash": "3b4fcfcf393eca4d264dca4a4663bc37",
+    "semantic_hash": ""
+  },
+  "frontend/src/assets/hero.png": {
+    "mtime": 1783103685.5225396,
+    "ast_hash": "aead493361b27e7510691c5d7072dfc1",
+    "semantic_hash": ""
+  },
+  "frontend/src/assets/react.svg": {
+    "mtime": 1783103685.5227814,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": ""
+  },
+  "frontend/src/assets/vite.svg": {
+    "mtime": 1783103685.5228906,
+    "ast_hash": "9960a24288958394ac50e57ff638b036",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/employee-debug.png": {
+    "mtime": 1783158046.5144722,
+    "ast_hash": "51a8913da0e7f949796fa1a55745651e",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/employee-self-service.png": {
+    "mtime": 1783158247.547559,
+    "ast_hash": "c61bd114d120e218b8511c191bd24e52",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/owner-hr-master-data.png": {
+    "mtime": 1783158245.225558,
+    "ast_hash": "9a05b8c92617575a0dff13525d6b586a",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/EmployeeIdCard.tsx": {
+    "mtime": 1783159005.529816,
+    "ast_hash": "ace5761ec61207458e97400e24ae137d",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/employee-id-card.png": {
+    "mtime": 1783159053.9203498,
+    "ast_hash": "a35b0fd4f5c42c81d5527949538e0c3c",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/owner-id-card.png": {
+    "mtime": 1783159051.9878006,
+    "ast_hash": "b47a8ee3defb675fa90adceec0d8995e",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/SkeletonShimmer.tsx": {
+    "mtime": 1783159389.7563405,
+    "ast_hash": "0990994666bf2cae1c8afda049e996be",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/skeleton-shimmer-loading.png": {
+    "mtime": 1783159584.478503,
+    "ast_hash": "3e35ea9f86c3c830bc297c27ff89d28f",
+    "semantic_hash": ""
+  },
+  ".codex/smoke/skeleton-shimmer-resolved.png": {
+    "mtime": 1783159587.6730974,
+    "ast_hash": "b47a8ee3defb675fa90adceec0d8995e",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704120811_add_employee_photos_storage.sql": {
+    "mtime": 1783166908.9759727,
+    "ast_hash": "85a27877d2091cfae7de328d805b408f",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704122759_complete_phase_2_master_data.sql": {
+    "mtime": 1783168094.0695329,
+    "ast_hash": "1c3feacbe94f784f39447ca616969c49",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/leave/leave-repository.ts": {
+    "mtime": 1783170475.089866,
+    "ast_hash": "ef5938e6bea9e16ae451b70a5aae5049",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/leave.ts": {
+    "mtime": 1783170409.3337817,
+    "ast_hash": "2a3bef57de4a9faef52bc96920eb20a2",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704130421_phase_3a_leave_workflow.sql": {
+    "mtime": 1783184542.4342318,
+    "ast_hash": "84ea53f00c793539c5a2da01647171cc",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/attendance/attendance-repository.ts": {
+    "mtime": 1783187521.4069197,
+    "ast_hash": "5a06c3bad7fd8d11ce333f7043914d32",
+    "semantic_hash": ""
+  },
+  "backend/src/routes/attendance.ts": {
+    "mtime": 1783185674.8525202,
+    "ast_hash": "721d4280647772d1be101d867347176f",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/payroll-run-repository.ts": {
+    "mtime": 1783288229.774964,
+    "ast_hash": "34e4977e25ec496a629a8360ea37526c",
+    "semantic_hash": ""
+  },
+  ".codex/screenshots/phase4c-payroll-adjustments.png": {
+    "mtime": 1783265816.7090662,
+    "ast_hash": "617ecc898706d0ff226f7ed5eb8cf2a8",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/payroll-run-repository.test.ts": {
+    "mtime": 1783267587.8492682,
+    "ast_hash": "6efb75ca709b6e6c024a0d1d99ba24ad",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/payroll-export-service.test.ts": {
+    "mtime": 1784150463.0279744,
+    "ast_hash": "b5ba8704c93efa4ac634fd1841ec9bbe",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/payroll-export-service.ts": {
+    "mtime": 1784150439.5510263,
+    "ast_hash": "5cfc57e069b64c965f584ee303c76898",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/payslip-service.test.ts": {
+    "mtime": 1783288889.654152,
+    "ast_hash": "d527c2729077011b440fa92b2ad4768d",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/payroll/payslip-service.ts": {
+    "mtime": 1784149592.4454842,
+    "ast_hash": "9bf1922ef0f7a3a25d784e9ea8ef8e0c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704172926_complete_phase_3_attendance.sql": {
+    "mtime": 1783185440.5821588,
+    "ast_hash": "e3297b139fb4c618f9772eb04106c631",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704173104_fix_attendance_lock_trigger.sql": {
+    "mtime": 1783186252.2265115,
+    "ast_hash": "b1d36ea068e12fd394c1a459f4b7ddba",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260704175742_phase_4a_payroll_run_foundation.sql": {
+    "mtime": 1783187512.687745,
+    "ast_hash": "c8420c4b5492f513281f64372b666d3b",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260705085550_phase_4b_payroll_approval_locks.sql": {
+    "mtime": 1783241504.4328709,
+    "ast_hash": "fc519c24e92b344500bb5b592c9473e3",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260705153022_phase_4c_payroll_adjustments_variance.sql": {
+    "mtime": 1783264777.2480693,
+    "ast_hash": "55a613cbc2c087c6229509b04f0a28f4",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260705205830_phase_5a_payslip_documents.sql": {
+    "mtime": 1783285697.9921885,
+    "ast_hash": "6f9a42b35c4dc2701861ebfc329107e2",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260715211152_phase_5c_bank_and_report_exports.sql": {
+    "mtime": 1784149952.737186,
+    "ast_hash": "889ef15ab61ee646090caf78933b04bf",
+    "semantic_hash": ""
+  }
+}

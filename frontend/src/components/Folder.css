@@ -1,0 +1,132 @@
+.rb-folder {
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+}
+
+.rb-folder:hover,
+.rb-folder:focus-visible,
+.rb-folder--open {
+  transform: translateY(-6px);
+}
+
+.rb-folder:focus-visible {
+  outline: 3px solid var(--vf-brown);
+  outline-offset: 8px;
+}
+
+.rb-folder:hover .rb-folder__paper,
+.rb-folder:focus-visible .rb-folder__paper {
+  transform: translate(-50%, 0%);
+}
+
+.rb-folder:hover .rb-folder__front,
+.rb-folder:focus-visible .rb-folder__front,
+.rb-folder--open .rb-folder__front {
+  transform: skew(15deg) scaleY(0.62);
+}
+
+.rb-folder:hover .rb-folder__front--right,
+.rb-folder:focus-visible .rb-folder__front--right,
+.rb-folder--open .rb-folder__front--right {
+  transform: skew(-15deg) scaleY(0.62);
+}
+
+.rb-folder__back {
+  position: relative;
+  width: 100px;
+  height: 80px;
+  border-radius: 0 10px 10px;
+  background: var(--folder-back-color);
+}
+
+.rb-folder__back::after {
+  position: absolute;
+  z-index: 0;
+  bottom: 98%;
+  left: 0;
+  width: 30px;
+  height: 10px;
+  border-radius: 5px 5px 0 0;
+  background: var(--folder-back-color);
+  content: "";
+}
+
+.rb-folder__paper {
+  position: absolute;
+  z-index: 2;
+  bottom: 10%;
+  left: 50%;
+  display: flex;
+  width: 72%;
+  height: 80%;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(10, 41, 71, 0.08);
+  border-radius: 10px;
+  background: #fffaf0;
+  color: var(--vf-navy);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  transform: translate(-50%, 10%);
+  transition:
+    transform 260ms ease,
+    height 260ms ease;
+}
+
+.rb-folder__paper--2 {
+  width: 82%;
+  height: 70%;
+  background: #f3e4c9;
+}
+
+.rb-folder__paper--3 {
+  width: 62%;
+  height: 68%;
+  background: #d3d4c0;
+}
+
+.rb-folder--open .rb-folder__paper--1 {
+  transform: translate(calc(-120% + var(--magnet-x, 0px)), calc(-70% + var(--magnet-y, 0px))) rotate(-14deg);
+}
+
+.rb-folder--open .rb-folder__paper--2 {
+  height: 80%;
+  transform: translate(calc(10% + var(--magnet-x, 0px)), calc(-70% + var(--magnet-y, 0px))) rotate(14deg);
+}
+
+.rb-folder--open .rb-folder__paper--3 {
+  height: 80%;
+  transform: translate(calc(-50% + var(--magnet-x, 0px)), calc(-100% + var(--magnet-y, 0px))) rotate(5deg);
+}
+
+.rb-folder__front {
+  position: absolute;
+  z-index: 3;
+  right: 10%;
+  bottom: 0;
+  width: 60%;
+  height: 70%;
+  border-radius: 5px 10px 10px 10px;
+  background: var(--folder-color);
+  transform-origin: bottom;
+  transition: transform 260ms ease;
+}
+
+.rb-folder__front--right {
+  right: auto;
+  left: 10%;
+  width: 60%;
+  border-radius: 10px 5px 10px 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-folder,
+  .rb-folder__front,
+  .rb-folder__paper {
+    transition-duration: 0.01ms !important;
+  }
+}

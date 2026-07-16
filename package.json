@@ -1,0 +1,44 @@
+{
+  "name": "vetanflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace frontend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run dev --workspace backend",
+    "build": "npm run build --workspace frontend && npm run build --workspace backend",
+    "lint": "npm run lint --workspace frontend && npm run lint --workspace backend",
+    "test": "npm run test --workspace backend",
+    "typecheck": "npm run typecheck --workspace frontend && npm run typecheck --workspace backend",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
+    "prepare": "husky",
+    "deploy:check": "node scripts/check-deploy-readiness.mjs",
+    "handoff:update": "node scripts/update-handoff.mjs",
+    "demo:check": "node scripts/check-demo-readiness.mjs",
+    "demo:prepare": "tsx scripts/prepare-demo-data.ts",
+    "demo:reset": "npx supabase db query --linked --file scripts/sql/reset-demo-data.sql && npm run demo:prepare",
+    "screenshots:open-profiles": "node scripts/open-demo-profiles.mjs",
+    "screenshots:capture": "node scripts/capture-demo-screenshots.mjs",
+    "screenshots:capture-authenticated": "node scripts/capture-authenticated-demo-screenshots.mjs",
+    "automation:setup": "npm run graphify:install && npm run prepare",
+    "graphify:install": "python3 -m venv .venv && .venv/bin/python -m pip install -r requirements-dev.txt && .venv/bin/graphify install --project --platform codex",
+    "graphify:extract": ".venv/bin/graphify extract . --no-cluster",
+    "graphify:update": ".venv/bin/graphify update .",
+    "supabase:link": "supabase link",
+    "supabase:push": "supabase db push --linked",
+    "supabase:types": "mkdir -p backend/src/lib && supabase gen types --lang typescript --linked --schema public > backend/src/lib/database.types.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "supabase": "^2.109.0"
+  }
+}
