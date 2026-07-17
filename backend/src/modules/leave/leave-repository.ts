@@ -299,12 +299,23 @@ export function createLeaveRepository(): LeaveRepository {
         return { data: getFallbackDashboard(), source: 'fixture' }
       }
 
-      const [profileResult, rolesResult, employeesResult, requestsResult] = await Promise.all([
+      const profileResult = await supabase
+        .from('profiles')
+        .select('organization_id, organizations(id, name)')
+        .single()
+
+      if (profileResult.error) {
+        throw profileResult.error
+      }
+
+      const earlyProfile = profileResult.data as ProfileRow | null
+
+      const [rolesResult, employeesResult, requestsResult] = await Promise.all([
         supabase
-          .from('profiles')
-          .select('organization_id, organizations(id, name)')
-          .single(),
-        supabase.from('user_roles').select('role').order('role'),
+          .from('user_roles')
+          .select('role')
+          .eq('organization_id', earlyProfile?.organization_id ?? '')
+          .order('role'),
         supabase
           .from('employees')
           .select('id, organization_id, employee_code, full_name, profile_id, manager_employee_id')
@@ -331,7 +342,7 @@ export function createLeaveRepository(): LeaveRepository {
           .limit(50),
       ])
 
-      for (const result of [profileResult, rolesResult, employeesResult, requestsResult]) {
+      for (const result of [rolesResult, employeesResult, requestsResult]) {
         if (result.error) {
           throw result.error
         }

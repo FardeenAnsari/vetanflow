@@ -654,18 +654,25 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
         return { data: getFallbackMasterData(), source: 'fixture' }
       }
 
-      const [profileResult, rolesResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, organization_id, organizations(id, name, country_code, currency_code, locale, timezone)')
-          .single(),
-        supabase.from('user_roles').select('role').order('role'),
-      ])
+      const profileResult = await supabase
+        .from('profiles')
+        .select('id, organization_id, organizations(id, name, country_code, currency_code, locale, timezone)')
+        .single()
 
-      for (const result of [profileResult, rolesResult]) {
-        if (result.error) {
-          throw result.error
-        }
+      if (profileResult.error) {
+        throw profileResult.error
+      }
+
+      const earlyProfile = profileResult.data as ProfileRow | null
+
+      const rolesResult = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('organization_id', earlyProfile?.organization_id ?? '')
+        .order('role')
+
+      if (rolesResult.error) {
+        throw rolesResult.error
       }
 
       const profile = profileResult.data as ProfileRow | null

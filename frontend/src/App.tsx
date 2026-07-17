@@ -88,6 +88,16 @@ function withDevelopmentFixtureRole<T extends { currentUserRoles: AppRole[] }>(d
   return developmentFixtureRole ? { ...data, currentUserRoles: [developmentFixtureRole] } : data
 }
 
+function clearLocalSupabaseAuthStorage() {
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    for (const key of Object.keys(storage)) {
+      if (key.startsWith('sb-') && key.includes('auth-token')) {
+        storage.removeItem(key)
+      }
+    }
+  }
+}
+
 type HrEmployee = {
   id: string
   annualCompensation: number
@@ -798,6 +808,49 @@ const fallbackPayrollDashboard: PayrollDashboard = {
   runs: [],
 }
 
+const emptyAuthenticatedMasterData: HrMasterData = {
+  auditEntries: [],
+  currentUserRoles: [],
+  departments: [],
+  employees: [],
+  locations: [],
+  organization: null,
+  salaryRevisions: [],
+}
+
+const emptyAuthenticatedLeaveDashboard: LeaveDashboard = {
+  currentUserRoles: [],
+  employees: [],
+  organization: null,
+  requests: [],
+}
+
+const emptyAuthenticatedPayrollDashboard: PayrollDashboard = {
+  currentUserRoles: [],
+  organization: null,
+  runs: [],
+}
+
+function createEmptyAuthenticatedAttendanceDashboard(periodMonth?: string): AttendanceDashboard {
+  const month = periodMonth ?? getCurrentPeriodMonth()
+  const [year, monthIndex] = month.split('-').map(Number)
+
+  return {
+    currentUserRoles: [],
+    employees: [],
+    entries: [],
+    holidays: [],
+    locks: [],
+    organization: null,
+    period: {
+      endDate: new Date(Date.UTC(year, monthIndex, 0)).toISOString().slice(0, 10),
+      month,
+      startDate: month,
+    },
+    summaries: [],
+  }
+}
+
 function createFallbackAttendanceDashboard(periodMonth?: string): AttendanceDashboard {
   const month = periodMonth ?? getCurrentPeriodMonth()
   const [year, monthIndex] = month.split('-').map(Number)
@@ -1266,8 +1319,11 @@ function SignInScreen({ onSignedIn }: { onSignedIn: () => void }) {
     setError('')
     setIsSubmitting(true)
 
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
+    clearLocalSupabaseAuthStorage()
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     })
 
@@ -2082,6 +2138,7 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
     (value: string) => formatMonthValue(value, organizationLocale),
     [organizationLocale],
   )
+  const sessionAccessToken = session?.access_token ?? null
 
   useEffect(() => {
     if (!supabase) {
@@ -2109,6 +2166,27 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
       subscription.subscription.unsubscribe()
     }
   }, [])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !sessionAccessToken) {
+      return
+    }
+
+    setMasterData(emptyAuthenticatedMasterData)
+    setLeaveData(emptyAuthenticatedLeaveDashboard)
+    setAttendanceData(createEmptyAuthenticatedAttendanceDashboard())
+    setPayrollData(emptyAuthenticatedPayrollDashboard)
+    setPayslipData({ payslips: [] })
+    setOrganizationMembers([])
+    setSelectedEmployeeId('')
+    setDataSource('supabase')
+    setDataState('loading')
+    setLeaveState('loading')
+    setAttendanceState('loading')
+    setPayrollState('loading')
+    setPayslipState('loading')
+    setAccessState('idle')
+  }, [sessionAccessToken])
 
   useEffect(() => {
     if (!masterData.organization) {
@@ -2192,8 +2270,12 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
       setDataSource(payload.meta?.source ?? 'supabase')
       setDataState('ready')
     } catch {
-      setMasterData(withDevelopmentFixtureRole(fallbackMasterData))
-      setDataSource('demo')
+      setMasterData(
+        isSupabaseConfigured && session?.access_token
+          ? emptyAuthenticatedMasterData
+          : withDevelopmentFixtureRole(fallbackMasterData),
+      )
+      setDataSource(isSupabaseConfigured && session?.access_token ? 'supabase' : 'demo')
       setDataState('error')
     }
   }, [session])
@@ -2223,7 +2305,11 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
       setLeaveData(withDevelopmentFixtureRole(payload.data))
       setLeaveState('ready')
     } catch {
-      setLeaveData(withDevelopmentFixtureRole(fallbackLeaveDashboard))
+      setLeaveData(
+        isSupabaseConfigured && session?.access_token
+          ? emptyAuthenticatedLeaveDashboard
+          : withDevelopmentFixtureRole(fallbackLeaveDashboard),
+      )
       setLeaveState('error')
     }
   }, [session])
@@ -2254,7 +2340,11 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
       setAttendanceData(withDevelopmentFixtureRole(payload.data))
       setAttendanceState('ready')
     } catch {
-      setAttendanceData(withDevelopmentFixtureRole(createFallbackAttendanceDashboard(attendancePeriodMonth)))
+      setAttendanceData(
+        isSupabaseConfigured && session?.access_token
+          ? createEmptyAuthenticatedAttendanceDashboard(attendancePeriodMonth)
+          : withDevelopmentFixtureRole(createFallbackAttendanceDashboard(attendancePeriodMonth)),
+      )
       setAttendanceState('error')
     }
   }, [attendancePeriodMonth, session])
@@ -2284,7 +2374,11 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
       setPayrollData(withDevelopmentFixtureRole(payload.data))
       setPayrollState('ready')
     } catch {
-      setPayrollData(withDevelopmentFixtureRole(fallbackPayrollDashboard))
+      setPayrollData(
+        isSupabaseConfigured && session?.access_token
+          ? emptyAuthenticatedPayrollDashboard
+          : withDevelopmentFixtureRole(fallbackPayrollDashboard),
+      )
       setPayrollState('error')
     }
   }, [session])
@@ -2451,11 +2545,13 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
 
   async function handleSignOut() {
     await supabase?.auth.signOut({ scope: 'local' })
+    clearLocalSupabaseAuthStorage()
     window.location.replace('/login')
   }
 
   async function handleUseAnotherAccount() {
     await supabase?.auth.signOut({ scope: 'local' })
+    clearLocalSupabaseAuthStorage()
     setSession(null)
     setShowAccountChoice(false)
   }
@@ -3548,7 +3644,9 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
     dataState === 'loading'
       ? 'Loading HR master data'
       : dataState === 'error'
-        ? 'API unavailable. Showing demo data'
+        ? isSupabaseConfigured && session
+          ? 'Unable to load secure workspace'
+          : 'API unavailable. Showing demo data'
         : dataSource === 'supabase'
           ? 'Live from Supabase'
           : 'Backend fixture data'
@@ -3626,6 +3724,39 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
 
   if (isSupabaseConfigured && !session) {
     return <SignInScreen onSignedIn={() => window.location.replace('/app')} />
+  }
+
+  if (isSupabaseConfigured && session && dataState === 'error' && masterData.currentUserRoles.length === 0) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-[var(--vf-surface)] px-4 text-[var(--vf-navy)]">
+        <section className="w-full max-w-md rounded-lg border border-red-200 bg-[var(--vf-paper)] p-6 shadow-lg">
+          <BrandLogo />
+          <p className="mt-8 text-xs font-semibold uppercase text-red-700">Workspace unavailable</p>
+          <h1 className="mt-2 text-2xl font-semibold">We could not confirm your role</h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--vf-text-muted)]">
+            This browser is signed in as <strong className="font-semibold text-[var(--vf-navy)]">{session.user.email}</strong>, but the secure role lookup did not complete.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <button
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--vf-primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--vf-primary-hover)]"
+              onClick={() => void Promise.all([loadMasterData(), loadLeaveData(), loadAttendanceData(), loadPayrollData(), loadPayslipData()])}
+              type="button"
+            >
+              <RefreshCw size={17} aria-hidden="true" />
+              Refresh
+            </button>
+            <button
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[color:var(--vf-border-strong)] px-4 text-sm font-semibold transition hover:bg-[var(--vf-primary-soft)]"
+              onClick={() => void handleUseAnotherAccount()}
+              type="button"
+            >
+              <UserRoundCog size={17} aria-hidden="true" />
+              Use another account
+            </button>
+          </div>
+        </section>
+      </main>
+    )
   }
 
   if (dataState === 'loading' && dataSource === 'demo') {

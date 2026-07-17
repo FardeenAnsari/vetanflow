@@ -1079,9 +1079,21 @@ export function createPayrollRunRepository(): PayrollRunRepository {
       }
 
       const db = supabase as any
-      const [profileResult, rolesResult, runsResult] = await Promise.all([
-        supabase.from('profiles').select('organization_id, organizations(id, name)').single(),
-        supabase.from('user_roles').select('role').order('role'),
+
+      const profileResult = await supabase.from('profiles').select('organization_id, organizations(id, name)').single()
+
+      if (profileResult.error) {
+        throw profileResult.error
+      }
+
+      const earlyProfile = profileResult.data as ProfileRow | null
+
+      const [rolesResult, runsResult] = await Promise.all([
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('organization_id', earlyProfile?.organization_id ?? '')
+          .order('role'),
         db
           .from('payroll_runs')
           .select(
@@ -1117,7 +1129,7 @@ export function createPayrollRunRepository(): PayrollRunRepository {
           .limit(24),
       ])
 
-      for (const result of [profileResult, rolesResult, runsResult]) {
+      for (const result of [rolesResult, runsResult]) {
         if (result.error) {
           throw result.error
         }

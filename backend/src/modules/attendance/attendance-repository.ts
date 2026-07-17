@@ -575,19 +575,25 @@ export function createAttendanceRepository(): AttendanceRepository {
         return { data: getFallbackDashboard(period.month), source: 'fixture' }
       }
 
-      const db = supabase as any
-      const [profileResult, rolesResult] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, organization_id, organizations(id, name)')
-          .single(),
-        supabase.from('user_roles').select('role').order('role'),
-      ])
+      const profileResult = await supabase
+        .from('profiles')
+        .select('id, organization_id, organizations(id, name)')
+        .single()
 
-      for (const result of [profileResult, rolesResult]) {
-        if (result.error) {
-          throw result.error
-        }
+      if (profileResult.error) {
+        throw profileResult.error
+      }
+
+      const earlyProfile = profileResult.data as ProfileRow | null
+
+      const rolesResult = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('organization_id', earlyProfile?.organization_id ?? '')
+        .order('role')
+
+      if (rolesResult.error) {
+        throw rolesResult.error
       }
 
       const profile = profileResult.data as ProfileRow | null
@@ -599,6 +605,8 @@ export function createAttendanceRepository(): AttendanceRepository {
       if (!profile?.organization_id || !serviceClient) {
         throw new Error('Supabase service role is required to load protected attendance data')
       }
+
+      const db = supabase as any
 
       const [employeesResult, entriesResult, holidaysResult, locksResult, leavesResult] = await Promise.all([
         serviceClient
