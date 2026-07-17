@@ -49,7 +49,7 @@ describe('buildPayslipPdf', () => {
     const text = pdf.toString('latin1')
 
     expect(text.startsWith('%PDF-1.4')).toBe(true)
-    expect(text).toContain('VetanFlow Payslip')
+    expect(text).toContain('PAYSLIP')
     expect(text).toContain('Aarav Mehta')
     expect(text).toContain('USD 79,950')
     expect(text).toContain('%%EOF')

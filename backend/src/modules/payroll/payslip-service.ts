@@ -258,6 +258,38 @@ function pdfStrokeRect(x: number, y: number, width: number, height: number, colo
   return `q ${color} RG ${x} ${y} ${width} ${height} re S Q`
 }
 
+function pdfDashedLine(x1: number, y1: number, x2: number, y2: number, color = '0.82 0.82 0.75') {
+  return `q [2 2] 0 d ${color} RG ${x1} ${y1} m ${x2} ${y2} l S Q`
+}
+
+function getHelveticaNumberWidth(text: string, size: number) {
+  let width = 0
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+    if (char >= '0' && char <= '9') {
+      width += 0.556 * size
+    } else if (char === '.' || char === ',') {
+      width += 0.278 * size
+    } else if (char === ' ') {
+      width += 0.278 * size
+    } else {
+      width += 0.556 * size
+    }
+  }
+  return width
+}
+
+function pdfRightAlignText(
+  rightX: number,
+  y: number,
+  text: string,
+  options: { bold?: boolean; color?: string; size?: number } = {},
+) {
+  const size = options.size ?? 10
+  const width = getHelveticaNumberWidth(text, size)
+  return pdfLine(rightX - width, y, text, options)
+}
+
 function buildPdfDocument(content: string) {
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
@@ -292,13 +324,17 @@ export function buildPayslipPdf(input: PayslipPdfInput) {
   const formatPayslipMoney = (value: number) => formatMoney(value, currencyCode, locale)
   const payroll = isRecord(input.line.calculationSnapshot) ? input.line.calculationSnapshot.payroll : null
   const attendance = isRecord(input.line.calculationSnapshot) ? input.line.calculationSnapshot.attendance : null
-  const earnings = [
+  
+  // Filter out zero-value items for cleaner layout
+  const rawEarnings = [
     ['Fixed gross', getNestedNumber(payroll, ['earnings', 'fixedGross'], input.line.grossPay)],
     ['Overtime', getNestedNumber(payroll, ['earnings', 'overtime'])],
     ['Taxable adjustments', getNestedNumber(payroll, ['earnings', 'taxableAdjustments'])],
     ['Reimbursements', getNestedNumber(payroll, ['earnings', 'reimbursements'])],
   ]
-  const deductions = [
+  const earnings = rawEarnings.filter(([, val]) => val !== 0)
+
+  const rawDeductions = [
     ['Loss of pay', getNestedNumber(payroll, ['deductions', 'unpaidLeave'])],
     ['Retirement contribution', getDeductionValue(payroll, 'retirementContribution')],
     ['Social insurance', getDeductionValue(payroll, 'socialInsurance')],
@@ -307,60 +343,104 @@ export function buildPayslipPdf(input: PayslipPdfInput) {
     ['Post-tax adjustments', getNestedNumber(payroll, ['deductions', 'postTaxAdjustments'])],
     ['Withholding tax', getDeductionValue(payroll, 'withholdingTax')],
   ]
+  const deductions = rawDeductions.filter(([, val]) => val !== 0)
+
   const commands = [
-    pdfRect(0, 735, 612, 57, '0.039 0.161 0.278'),
-    pdfLine(40, 760, 'VetanFlow Payslip', { bold: true, color: '1 1 1', size: 18 }),
-    pdfLine(40, 742, `${formatPayslipDate(input.periodStart)} to ${formatPayslipDate(input.periodEnd)}`, {
-      color: '1 1 1',
-      size: 10,
-    }),
-    pdfLine(405, 760, input.organization.legalName ?? input.organization.name, {
-      bold: true,
-      color: '1 1 1',
+    // Header
+    pdfRect(0, 715, 612, 77, '0.039 0.161 0.278'),
+    pdfLine(40, 755, 'PAYSLIP', { bold: true, color: '1 1 1', size: 22 }),
+    pdfLine(40, 735, `${formatPayslipDate(input.periodStart)} to ${formatPayslipDate(input.periodEnd)}`, {
+      color: '0.8 0.85 0.9',
       size: 11,
     }),
-    pdfLine(405, 744, 'Confidential payroll statement', {
+    pdfRightAlignText(572, 755, input.organization.legalName ?? input.organization.name, {
+      bold: true,
       color: '1 1 1',
-      size: 9,
+      size: 14,
     }),
-    pdfLine(40, 700, input.employee.name, { bold: true, size: 16 }),
-    pdfLine(40, 682, `${input.employee.code} - ${input.employee.designation}`, { size: 10 }),
-    pdfLine(40, 666, input.employee.email ?? 'No work email', { size: 10 }),
-    pdfRect(370, 658, 190, 54, '0.918 0.945 1'),
-    pdfStrokeRect(370, 658, 190, 54),
-    pdfLine(388, 691, 'Net Pay', { bold: true, size: 11 }),
-    pdfLine(388, 670, formatPayslipMoney(input.line.netPay), { bold: true, size: 18 }),
-    pdfLine(
-      40,
-      632,
-      `Attendance: ${getNestedNumber(attendance, ['payableDays'])} payable days, ${getNestedNumber(attendance, ['lossOfPayDays'])} LOP days`,
-      { size: 10 },
-    ),
-    pdfRect(40, 590, 250, 28, '0.91 0.925 0.945'),
-    pdfLine(55, 600, 'Earnings', { bold: true, size: 12 }),
-    pdfRect(322, 590, 250, 28, '0.91 0.925 0.945'),
-    pdfLine(337, 600, 'Deductions', { bold: true, size: 12 }),
+    pdfRightAlignText(572, 735, 'Confidential payroll statement', {
+      color: '0.8 0.85 0.9',
+      size: 10,
+    }),
+
+    // Employee Details Grid
+    pdfRect(40, 610, 532, 85, '0.98 0.98 0.99'),
+    pdfStrokeRect(40, 610, 532, 85, '0.88 0.88 0.9'),
+    
+    pdfLine(60, 670, 'Employee Name:', { color: '0.4 0.4 0.45', size: 9 }),
+    pdfLine(150, 670, input.employee.name, { bold: true, size: 10 }),
+    
+    pdfLine(60, 650, 'Employee ID:', { color: '0.4 0.4 0.45', size: 9 }),
+    pdfLine(150, 650, input.employee.code, { size: 10 }),
+    
+    pdfLine(60, 630, 'Designation:', { color: '0.4 0.4 0.45', size: 9 }),
+    pdfLine(150, 630, input.employee.designation, { size: 10 }),
+    
+    pdfLine(320, 670, 'Email:', { color: '0.4 0.4 0.45', size: 9 }),
+    pdfLine(390, 670, input.employee.email ?? 'Not provided', { size: 10 }),
+    
+    pdfLine(320, 650, 'Payable Days:', { color: '0.4 0.4 0.45', size: 9 }),
+    pdfLine(390, 650, String(getNestedNumber(attendance, ['payableDays'])), { size: 10 }),
+    
+    pdfLine(320, 630, 'LOP Days:', { color: '0.4 0.4 0.45', size: 9 }),
+    pdfLine(390, 630, String(getNestedNumber(attendance, ['lossOfPayDays'])), { size: 10 }),
+
+    // Table Header
+    pdfRect(40, 565, 532, 25, '0.94 0.95 0.96'),
+    pdfLine(60, 574, 'Earnings', { bold: true, size: 10 }),
+    pdfRightAlignText(290, 574, 'Amount', { bold: true, size: 10 }),
+    pdfLine(322, 574, 'Deductions', { bold: true, size: 10 }),
+    pdfRightAlignText(552, 574, 'Amount', { bold: true, size: 10 }),
+    pdfStrokeRect(40, 565, 532, 25, '0.85 0.85 0.88'),
   ]
 
-  earnings.forEach(([label, value], index) => {
-    const y = 560 - index * 25
-    commands.push(pdfLine(55, y, label as string, { size: 10 }))
-    commands.push(pdfLine(205, y, formatPayslipMoney(value as number), { size: 10 }))
-  })
+  const maxRows = Math.max(earnings.length, deductions.length, 1)
+  const rowHeight = 24
+  
+  for (let i = 0; i < maxRows; i++) {
+    const y = 565 - (i + 1) * rowHeight
+    const earning = earnings[i]
+    const deduction = deductions[i]
+    const textY = y + 8
+    
+    if (i > 0) {
+      commands.push(pdfDashedLine(40, y + rowHeight, 572, y + rowHeight, '0.9 0.9 0.92'))
+    }
+    
+    if (earning) {
+      commands.push(pdfLine(60, textY, earning[0] as string, { size: 9 }))
+      commands.push(pdfRightAlignText(290, textY, formatPayslipMoney(earning[1] as number), { size: 9 }))
+    }
+    
+    if (deduction) {
+      commands.push(pdfLine(322, textY, deduction[0] as string, { size: 9 }))
+      commands.push(pdfRightAlignText(552, textY, formatPayslipMoney(deduction[1] as number), { size: 9 }))
+    }
+  }
 
-  deductions.forEach(([label, value], index) => {
-    const y = 560 - index * 25
-    commands.push(pdfLine(337, y, label as string, { size: 10 }))
-    commands.push(pdfLine(487, y, formatPayslipMoney(value as number), { size: 10 }))
-  })
-
+  const tableBottomY = 565 - maxRows * rowHeight
   commands.push(
-    pdfStrokeRect(40, 350, 250, 32),
-    pdfStrokeRect(322, 350, 250, 32),
-    pdfLine(55, 361, `Total earnings ${formatPayslipMoney(input.line.totalEarnings)}`, { bold: true, size: 11 }),
-    pdfLine(337, 361, `Total deductions ${formatPayslipMoney(input.line.totalDeductions)}`, { bold: true, size: 11 }),
-    pdfLine(40, 95, 'This is a system generated payslip for payroll review records.', { size: 9 }),
-    pdfLine(40, 78, `Generated by VetanFlow. Values use ${currencyCode} and are rounded to whole units.`, { size: 9 }),
+    // Table outer border and center divider
+    pdfStrokeRect(40, tableBottomY, 532, maxRows * rowHeight, '0.85 0.85 0.88'),
+    pdfRect(306, tableBottomY, 1, (maxRows * rowHeight) + 25, '0.85 0.85 0.88'), // +25 to cover header
+    
+    // Totals Row
+    pdfRect(40, tableBottomY - 30, 532, 30, '0.98 0.98 0.99'),
+    pdfStrokeRect(40, tableBottomY - 30, 532, 30, '0.85 0.85 0.88'),
+    pdfLine(60, tableBottomY - 20, 'Total Earnings', { bold: true, size: 10 }),
+    pdfRightAlignText(290, tableBottomY - 20, formatPayslipMoney(input.line.totalEarnings), { bold: true, size: 10 }),
+    pdfLine(322, tableBottomY - 20, 'Total Deductions', { bold: true, size: 10 }),
+    pdfRightAlignText(552, tableBottomY - 20, formatPayslipMoney(input.line.totalDeductions), { bold: true, size: 10 }),
+    
+    // Net Pay Box
+    pdfRect(360, tableBottomY - 90, 212, 45, '0.91 0.96 1'), // Light tint
+    pdfStrokeRect(360, tableBottomY - 90, 212, 45, '0.7 0.8 0.9'),
+    pdfLine(375, tableBottomY - 65, 'Net Pay', { bold: true, size: 12 }),
+    pdfRightAlignText(552, tableBottomY - 65, formatPayslipMoney(input.line.netPay), { bold: true, size: 16 }),
+    
+    // Footer
+    pdfLine(40, 95, 'This is a system generated payslip for payroll review records.', { size: 9, color: '0.5 0.5 0.5' }),
+    pdfLine(40, 78, `Generated by VetanFlow. Values use ${currencyCode} and are rounded to whole units.`, { size: 9, color: '0.5 0.5 0.5' }),
   )
 
   return buildPdfDocument(commands.join('\n'))
