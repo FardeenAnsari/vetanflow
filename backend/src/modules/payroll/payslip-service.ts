@@ -619,7 +619,7 @@ export function createPayslipRepository(): PayslipRepository {
 
       const signedUrlResult = await serviceClient.storage
         .from(payslipBucket)
-        .createSignedUrl(payslip.storage_path, signedUrlTtlSeconds)
+        .createSignedUrl(payslip.storage_path, signedUrlTtlSeconds, { download: true })
 
       if (signedUrlResult.error) {
         throw signedUrlResult.error

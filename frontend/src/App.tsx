@@ -3274,7 +3274,7 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
         throw new Error('Payslip download is not ready')
       }
 
-      window.open(payload.data.signedUrl, '_blank', 'noopener,noreferrer')
+      window.location.assign(payload.data.signedUrl)
       setNotice(`Payslip link ready for ${Math.round(payload.data.expiresInSeconds / 60)} minutes`)
     } catch (error) {
       showRequestError(error, 'Unable to download payslip')
@@ -3759,7 +3759,7 @@ function WorkspaceApp({ forceAccountChoice = false }: { forceAccountChoice?: boo
     )
   }
 
-  if (dataState === 'loading' && dataSource === 'demo') {
+  if (dataState === 'loading' && (dataSource === 'demo' || !masterData.organization)) {
     return (
       <Suspense fallback={<AuthLoadingScreen />}>
         <PayrollWorkspaceSkeleton />

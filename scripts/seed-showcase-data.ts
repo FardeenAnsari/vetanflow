@@ -479,22 +479,29 @@ await query(
   'showcase compensation history',
   supabase.from('salary_revisions').upsert(
     employeeDefinitions.flatMap((employee, index) => {
-      const hasAnnualReview = ['VF-005', 'VF-006'].includes(employee.code)
+      const joiningYear = Number(employeeRows[index].joining_date.slice(0, 4))
+      const totalYears = 2026 - joiningYear
+      const startingSalary = Math.round(employee.annual / Math.pow(1.08, totalYears))
+      
       const base = {
-        annual_compensation: hasAnnualReview ? Math.round(employee.annual * 0.92) : employee.annual,
         created_by: authUsers.get(index < 2 ? 'owner' : 'hr').id,
         currency_code: 'USD',
         employee_id: employeeId[employee.code],
         organization_id: organizationId,
-        reason: 'Showcase compensation baseline',
       }
-      const rows = [{ ...base, effective_from: employeeRows[index].joining_date }]
+      
+      const rows = [{ 
+        ...base, 
+        annual_compensation: startingSalary,
+        effective_from: employeeRows[index].joining_date,
+        reason: 'Showcase compensation baseline'
+      }]
 
-      if (hasAnnualReview) {
+      for (let year = joiningYear + 1; year <= 2026; year++) {
         rows.push({
           ...base,
-          annual_compensation: employee.annual,
-          effective_from: '2026-01-01',
+          annual_compensation: Math.round(employee.annual / Math.pow(1.08, 2026 - year)),
+          effective_from: `${year}-01-01`,
           reason: 'Annual compensation review',
         })
       }
