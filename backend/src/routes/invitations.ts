@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import { requireAuth } from '../modules/auth/auth-middleware.js'
+import { EmployeeAccountLinkError } from '../modules/auth/employee-account-link.js'
 import {
   invitationSchema,
   inviteUser,
@@ -71,6 +72,10 @@ invitationsRouter.post('/', invitationRateLimiter, requireAuth, async (req, res)
     res.status(201).json({ data: result.data })
   } catch (error) {
     console.error(error)
+    if (error instanceof EmployeeAccountLinkError) {
+      res.status(error.statusCode).json({ error: error.message })
+      return
+    }
     res.status(500).json({ error: 'Unable to invite user' })
   }
 })

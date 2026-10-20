@@ -318,8 +318,9 @@ function buildPdfDocument(content: string) {
 }
 
 export function buildPayslipPdf(input: PayslipPdfInput) {
-  const currencyCode = input.organization.currencyCode ?? env.payroll.currencyCode
-  const locale = input.organization.locale ?? env.payroll.locale
+  const snapshot = input.line.calculationSnapshot as { money?: { currencyCode?: string; locale?: string } } | null
+  const currencyCode = snapshot?.money?.currencyCode ?? input.organization.currencyCode ?? env.payroll.currencyCode
+  const locale = snapshot?.money?.locale ?? input.organization.locale ?? env.payroll.locale
   const formatPayslipDate = (value: string) => formatDate(value, locale)
   const formatPayslipMoney = (value: number) => formatMoney(value, currencyCode, locale)
   const payroll = isRecord(input.line.calculationSnapshot) ? input.line.calculationSnapshot.payroll : null

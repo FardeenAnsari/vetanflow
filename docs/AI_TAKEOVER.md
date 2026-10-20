@@ -4,14 +4,16 @@ This is the authoritative resume document for an AI model or engineer taking ove
 
 ## Resume Point
 
-- Phases 0 through 9 are complete.
+- Phases 0 through 10 are complete; Phase 10 closed on October 17, 2026. Login/security maintenance and documentation were refreshed on October 20; Phase 11 is not complete.
 - The current product is a working React, Express, and Supabase payroll operations system, not the discarded prototype that preceded this repository.
-- The live Supabase showcase contains 12 role accounts, 10 employees, and six finalized payroll months with published payslips.
+- The live Supabase sample contains 12 role accounts, 24 Indian employees, and nine finalized INR payroll months with 198 published payslips. Organization defaults are IN/INR/en-IN/Asia/Kolkata.
 - Account switching is explicit at `/login`; a stored Supabase session no longer silently forces every login attempt into the owner workspace.
 - Owner is the highest organization role and can export any visible employee ID card. Employees can export only their own.
 - Organization country, currency, locale, and timezone are validated selections that drive formatting and reporting behavior.
 - The frontend and API can run together with `npm run dev` and can deploy together through the Vercel function adapter in `api/[...path].ts`.
-- No feature phase is currently active. The next meaningful milestone is a real hosted production deployment and operational hardening.
+- Phase 10 changes are uncommitted and have not been pushed or redeployed. Phase 11 should stage these changes against the existing hosted configuration and address operational hardening. Do not assume an older hosted deployment matches this working tree.
+- Read `docs/DEMO_USABILITY_AUDIT.md` and `docs/DEMO_GUIDE.md` for current evidence, account names, known risks, and presentation steps.
+- Read `docs/RELEASE_READINESS.md` before committing or deploying. It records the current security findings, release gates, unrelated untracked material, and launch limitations.
 
 ## Read In This Order
 
@@ -23,7 +25,7 @@ This is the authoritative resume document for an AI model or engineer taking ove
 6. `docs/DEPLOYMENT.md`: current Vercel, Render, Supabase, and Sentry deployment paths.
 7. `supabase/migrations/`: executable database history and the final authority for schema/security.
 8. `backend/src/modules/`: domain rules, repositories, PDF/CSV generation, and authorization.
-9. `frontend/src/App.tsx`: authenticated application composition and role workflows.
+9. `frontend/src/App.tsx` for lazy routing, then `frontend/src/WorkspaceApp.tsx` for authenticated workflows.
 10. `scripts/`: repeatable showcase provisioning, checks, screenshots, and handoff automation.
 
 ## Product Contract
@@ -41,7 +43,7 @@ VetanFlow owns the operational path from employee setup to private payroll docum
 9. The backend generates private payslips and finance CSV exports.
 10. Employees access only their own published documents.
 
-The system is deliberately region-neutral. Country-specific statutory compliance packs, tax filing, banking integrations, and government submissions are outside the current product contract.
+The engine remains configurable, but the sample people, offices, preferences, and history are Indian/INR. Country-specific statutory compliance, tax filing, banking integrations, and government submissions are outside the current product contract. INR formatting does not implement PF, ESI, TDS, or filings.
 
 ## Stack
 
@@ -89,8 +91,9 @@ Never move payroll authority into the browser. UI hiding is for usability; API a
 | `/licenses` | product evaluation and third-party licenses |
 | `/login` | sign-in and stored-session account switcher |
 | `/app` | authenticated role workspace |
+| `/demo` | named role/account entry; local shortcut only when explicitly enabled, normal sign-in on hosted builds |
 
-The authenticated workspace uses hash sections for `overview`, `employees`, `leave`, `attendance`, `payroll`, `organization`, `access`, and `audit`.
+The authenticated workspace uses hash sections including `overview`, `self`, `employees`, `leave`, `attendance`, `payroll`, `organization`, `access`, and `audit`. Every operational role has My profile & pay, resolved through the authenticated `currentEmployeeId`, never the directory selection. Employee self-service has separate overview/profile/pay/leave views.
 
 ## Role Model
 
@@ -101,7 +104,7 @@ Application roles are `owner`, `admin`, `hr`, `finance`, `manager`, and `employe
 | Owner | entire organization, settings, access, HR, payroll, exports, audit, every employee ID card |
 | Admin | broad organization operations and permitted member administration |
 | HR | employee lifecycle, compensation history, leave, attendance, organization setup, payroll preparation |
-| Finance | payroll-wide operations, payment readiness, approval/finalization, exports, audit |
+| Finance | personal record, payroll-wide operations, payment readiness, approval/finalization, exports; no access/organization/audit navigation |
 | Manager | self plus direct reports, team attendance, leave decisions and escalation |
 | Employee | own employee record, digital ID, leave, compensation history, and payslips |
 
@@ -113,23 +116,29 @@ Role priority is owner, admin, HR, finance, manager, employee. The frontend matr
 - `/login` checks the persisted Supabase session.
 - When a session exists, the user sees the current email and chooses either `Continue` or `Use another account`.
 - `Use another account` performs a local-scope sign-out and returns to a clean sign-in form.
-- Successful sign-in redirects to `/app`.
+- Password sign-in uses an isolated nonpersistent client with its own storage key. `frontend/src/lib/workspace-auth.ts` validates `/api/auth/workspace` before installing the shared browser session, then redirects to `/app`. Failed attempts preserve an existing valid session.
+- `backend/src/modules/auth/workspace-access.ts` resolves only the verified user's profile, organization, and roles. Old `.test` Auth identities have no workspace assignment and must not receive guessed roles.
+- `WorkspaceApp.tsx` ignores stale per-domain results and gates master data on the current token. Auth events supersede initial session restoration. Switching in one tab updates other tabs sharing that session.
 - Workspace sign-out also clears only the local browser session and returns to `/login`.
 - The backend verifies Bearer tokens and resolves organization/profile/roles before domain work.
 - Users never choose their own role during signup.
+- `backend/src/modules/auth/employee-account-link.ts` links employee records and profiles by normalized exact email within one organization, in either creation order. Duplicate/ambiguous matches fail closed. Linked work emails cannot be changed independently of their login account.
+- `backend/src/modules/demo/demo-router.ts` is an explicitly enabled localhost-only developer convenience. It reads ignored local credentials, creates real sessions, verifies stored roles, and refuses production mode. Never expose its credentials/session shortcut publicly.
+- Request timeouts live in `frontend/src/lib/api-client.ts`; sign-out removes only the current project's local session keys.
 
 ## API Map
 
 | Module | Main responsibility |
 | --- | --- |
 | `backend/src/routes/health.ts` | service health |
+| `backend/src/routes/auth.ts` | verified candidate workspace context before session installation |
 | `backend/src/routes/hr.ts` | master data, organization settings, employees, photos, ID PDFs, salary revisions |
 | `backend/src/routes/invitations.ts` | organization members and hierarchy-safe invitations |
 | `backend/src/routes/leave.ts` | leave dashboard, request, review, escalation, cancellation |
 | `backend/src/routes/attendance.ts` | entries, holidays, summaries, month lock/unlock |
 | `backend/src/routes/payroll.ts` | preview, runs, adjustments, transitions, payslips, downloads, exports |
 
-`backend/src/app.ts` applies Helmet, explicit CORS, a 100 KB JSON body cap, API rate limiting, Sentry error handling, and a generic final error response. Production configuration fails fast when Supabase or trusted CORS values are missing.
+`backend/src/app.ts` applies Helmet, explicit CORS, a 100 KB JSON body cap, no-store API response headers, API rate limiting, Sentry error handling, and a generic final error response. Production configuration fails fast when Supabase or trusted CORS values are missing. In-memory rate limits remain per process, not globally durable across serverless instances.
 
 ## Database Map
 
@@ -178,15 +187,14 @@ The current seeded state is:
 | --- | ---: |
 | Auth-linked profiles | 12 |
 | Role assignments | 12 |
-| Employees | 10 |
-| Salary revisions | 12 |
-| Attendance entries | 216 |
-| Leave requests | 5 |
-| Payroll runs | 6 |
-| Payroll run lines | 54 |
-| Payroll adjustments | 18 |
-| Published payslips | 54 |
-| Audit logs at final verification | 51 |
+| Employees | 24 |
+| Salary revisions | 72 |
+| Attendance entries | 6,270 |
+| Leave requests | 24 |
+| Payroll runs | 9 |
+| Payroll run lines | 198 |
+| Payroll adjustments | 27 |
+| Published payslips | 198 |
 
 Account distribution:
 
@@ -200,6 +208,10 @@ Account distribution:
 Each role shares one role-specific showcase password. The owner uses the user-supplied owner password. All credentials are stored only in ignored `.tmp/demo-credentials.json` with local owner-only permissions. Never paste that file into source, documentation, screenshots, issues, or commits.
 
 `scripts/bootstrap-showcase.mjs` seeds six previous calendar months using offsets `-6` through `-1`, then runs readiness and all-account authorization checks.
+
+On October 17 the user explicitly approved rebuilding the six legacy synthetic periods in INR. Original records remain in `.tmp/before-india-refresh-*.json`; targeted records and 54 old PDFs remain in `.tmp/legacy-history-backup-*/`. The guarded one-time reset was limited to January-June 2026. July-September monetary amounts, identities, current attendance, and leave records were retained. Attendance summary metadata was reconciled to daily records, and all 198 current PDFs were refreshed. The user subsequently approved deleting the 54 obsolete cloud PDFs; that deletion completed with a private cleanup receipt and all 198 current PDFs retained. Local backups were not removed.
+
+`scripts/sql/verify-inr-history.sql` currently asserts the nine-period/198-line snapshot. It is sample-specific, not a generic production validator. `scripts/backup-legacy-inr-history.ts`, `scripts/sql/rebuild-legacy-inr-history.sql`, and `scripts/sql/repair-sample-attendance-snapshots.sql` document completed maintenance, not ordinary runtime behavior. Do not rerun the reset against reconciled history or real payroll.
 
 ## ID Card And Brand System
 
@@ -222,6 +234,8 @@ Each role shares one role-specific showcase password. The owner uses the user-su
 - IANA timezone
 
 Saved values drive currency rendering, localized document dates, organization labels, and reporting-cutoff previews. Do not replace these controls with free-text inputs.
+
+The API rejects currency changes after the first payroll run. New line snapshots include `money.currencyCode`/`money.locale`; PDFs use those values instead of later organization defaults. Currency codes must be supported ISO values, not merely three characters.
 
 ## Environment Variables
 
@@ -260,7 +274,8 @@ Never create a `VITE_*` service-role variable. Local `.env` files are ignored; `
 ```sh
 npm install                 # install all workspaces
 npm run dev                 # API on 4000 and Vite on 5173 or next free port
-npm run verify              # lint, typecheck, 62 tests, frontend/backend builds
+npm run verify              # secret checks, lint, typecheck, scanner/API/UI tests, builds
+npm run security:check -- --history # current source/build and reachable history scan
 npm run deploy:check        # deployment-file and env-shape preflight
 npm run demo:bootstrap      # idempotent 12-account, six-month showcase build
 npm run demo:check          # 15 live readiness assertions
@@ -270,23 +285,29 @@ npm run supabase:push       # apply linked migrations
 npm run supabase:types      # regenerate backend database types
 npm run handoff:update      # regenerate handoff snapshot
 npm run graphify:update     # refresh the phase-level knowledge graph
+npm run demo                # explicitly enabled local role entry and both dev servers
+npm run demo:users          # print local ignored credentials; do not publish the output
+npm run demo:check-ui       # Chrome role/navigation/mobile/download proof
 ```
 
 When Vite moves off `5173`, add the selected frontend origin to backend `CORS_ORIGIN` before testing authenticated requests.
 
 ## Verification Baseline
 
-At Phase 9 closeout:
+Current October 20 baseline (earlier Phase 10 browser/data evidence remains in the audit):
 
-- `npm run verify`: 7 test files and 62 tests passed; lint, typecheck, frontend build, and backend build passed.
+- `npm run verify`: 103 tests passed (94 backend, 5 frontend, 4 scanner regressions); lint, typecheck, frontend build, and backend build passed.
 - `npm run deploy:check`: passed.
 - `npm run demo:check`: 15 passed, 0 warnings, 0 failures.
 - `npm run demo:check-logins`: 12 of 12 accounts passed.
 - Owner ID authorization: multiple employee cards returned `200`.
 - Employee ID authorization: own card returned `200`; cross-record card returned `404`.
 - `npm audit --audit-level=moderate`: 0 vulnerabilities.
-- Supabase database lint: no schema errors.
+- Fresh management SQL confirmed RLS on all 16 public tables, no anonymous public-table access or direct authenticated writes, both private buckets, and no public execution of the security-definer function. The security advisor reports only disabled leaked-password protection; performance advice contains 26 informational unused-index findings. Earlier Phase 10 guard probes rejected finalized payroll/locked attendance writes.
+- Nine periods and 198 lines passed currency, identity, monetary, attendance, maker/checker, and publication reconciliation. All PDFs refreshed, with one downloaded/inspected per month.
+- `scripts/check-live-onboarding.ts --write-sample` passed both creation orders and cleanup, self-only visibility, duplicate-email 409, and currency-change 409. This does not verify invitation email delivery.
 - Responsive browser checks passed on desktop and compact mobile widths without page-level horizontal overflow.
+- October 20 browser checks passed repeated account switching, failed-password preservation, valid-password retry, and cross-tab identity changes. Current credentials and build/history scans produced no findings; no commit/push/deployment occurred.
 
 The local machine may print a Supabase SDK deprecation warning under Node 20. Use the required Node 22+ runtime; do not add code to preserve Node 20 as a production target.
 
@@ -325,7 +346,7 @@ See `docs/DEPLOYMENT.md` before hosting.
 - Use Zod at every external input boundary.
 - Never trust organization, employee, payroll-run, or role identifiers supplied by the browser without server-side scope checks.
 - Never expose the service-role key.
-- Never bypass finalized-payroll or attendance-lock triggers.
+- Never bypass finalized-payroll or attendance-lock triggers in normal workflows. The only exception in this batch was explicitly approved, backed-up synthetic maintenance in a guarded transaction with protections restored before commit.
 - Never let users self-assign roles.
 - Never run `demo:reset` against an unrelated or shared organization.
 - Preserve unrelated user changes in a dirty worktree.
@@ -336,7 +357,7 @@ See `docs/DEPLOYMENT.md` before hosting.
 
 ## Known External Work
 
-The codebase is feature-complete for its current scope, but production operation still requires external decisions and services:
+The current workflow batch is implemented and tested, but commercial production operation still requires additional work:
 
 1. Deploy and connect real domains.
 2. Configure Sentry DSNs and alert routing.
@@ -346,6 +367,9 @@ The codebase is feature-complete for its current scope, but production operation
 6. Replace evaluation legal copy with counsel-reviewed commercial terms and privacy documents.
 7. Commission an independent penetration test before handling real payroll data.
 8. Add country-specific compliance modules only as separate, tested policy packs.
+9. Add database uniqueness for organization/profile and normalized employee emails. Current application checks do not eliminate concurrent-create races.
+10. Recheck cloud advisors after deployment/configuration changes. Connector access recovered on October 20; the current security warning is disabled leaked-password protection. Never expose backend/database credentials in documentation or committed commands.
+11. Use shared rate-limit storage for serverless/multi-instance enforcement. Current in-memory limits reset per process and are not a global quota.
 
 ## Safe Takeover Procedure
 
@@ -363,4 +387,4 @@ The codebase is feature-complete for its current scope, but production operation
 
 ## Where To Continue
 
-The recommended next phase is **Hosted Production Operations**. Its first deliverable should be a real staging deployment using the preferred Vercel plus Supabase shape, followed by Sentry activation, Auth email delivery, backup/restore evidence, and an end-to-end staging smoke test. Do not start another broad UI redesign before that operational baseline exists.
+The recommended next phase is **Phase 11: Hosted Operations And Remaining Hardening**. Inspect the existing deployment first, stage the uncommitted changes using the Vercel plus Supabase shape, add database concurrency constraints, then verify Sentry, Auth email delivery, backups/restores, and the complete staging workflow. Do not start another broad UI redesign before that operational baseline exists.

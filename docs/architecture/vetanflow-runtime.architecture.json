@@ -1,0 +1,259 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "VetanFlow High-Level Runtime Architecture",
+    "output": "docs/architecture/vetanflow-runtime.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/FardeenAnsari/vetanflow",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "76aa0176b0c9f5a53f35a318f21a2c20aa49ba3a"
+    },
+    "viewBox": [1160, 500]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Workforce User",
+      "sublabel": "role-based access",
+      "pos": [30, 190],
+      "size": [150, 68]
+    },
+    {
+      "id": "spa",
+      "type": "frontend",
+      "label": "React SPA",
+      "sublabel": "Vite + role-aware workspace",
+      "pos": [220, 190],
+      "size": [170, 68],
+      "sources": [
+        { "path": "frontend/src/App.tsx", "line": 62, "label": "UI + API client" },
+        { "path": "frontend/src/lib/supabase.ts", "line": 1, "label": "Browser auth client" }
+      ]
+    },
+    {
+      "id": "vercel",
+      "type": "cloud",
+      "label": "Vercel Routing",
+      "sublabel": "static assets + same-origin /api",
+      "pos": [430, 190],
+      "size": [174, 68],
+      "sources": [
+        { "path": "vercel.json", "line": 1, "label": "Build + rewrites" }
+      ]
+    },
+    {
+      "id": "adapter",
+      "type": "backend",
+      "label": "Serverless Adapter",
+      "sublabel": "api/[...path].ts",
+      "pos": [430, 310],
+      "size": [164, 68],
+      "sources": [
+        { "path": "api/[...path].ts", "line": 1, "label": "Express bridge" }
+      ]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "API Security Pipeline",
+      "sublabel": "Helmet, CORS, limits, JWT validation",
+      "pos": [660, 310],
+      "size": [188, 68],
+      "sources": [
+        { "path": "backend/src/app.ts", "line": 13, "label": "HTTP controls" },
+        { "path": "backend/src/modules/auth/auth-middleware.ts", "line": 14, "label": "Bearer verification" }
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "Payroll Domain Modules",
+      "sublabel": "HR, leave, attendance, payroll, documents",
+      "pos": [910, 310],
+      "size": [200, 68],
+      "sources": [
+        { "path": "backend/src/app.ts", "line": 35, "label": "Route composition" },
+        { "path": "backend/src/modules/payroll/payroll-run-repository.ts", "line": 1, "label": "Payroll orchestration" }
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "external",
+      "label": "Supabase Auth",
+      "sublabel": "sessions, users, invitations",
+      "pos": [660, 35],
+      "size": [188, 66],
+      "sources": [
+        { "path": "backend/src/modules/auth/auth-middleware.ts", "line": 31, "label": "getUser(token)" },
+        { "path": "backend/src/modules/invitations/invitation-service.ts", "line": 118, "label": "Invite users" }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "Supabase Postgres",
+      "sublabel": "tenant data, roles, RLS, audit logs",
+      "pos": [910, 405],
+      "size": [200, 68],
+      "sources": [
+        { "path": "supabase/migrations/0001_initial_schema.sql", "line": 8, "label": "Core schema" },
+        { "path": "supabase/migrations/20260704034844_harden_employee_rls_for_roles.sql", "line": 16, "label": "Role-aware RLS" }
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "Supabase Storage",
+      "sublabel": "private photos + payslip PDFs",
+      "pos": [910, 35],
+      "size": [194, 66],
+      "sources": [
+        { "path": "backend/src/modules/payroll/payslip-service.ts", "line": 596, "label": "Payslip upload" },
+        { "path": "backend/src/modules/hr/employee-id-card-service.ts", "line": 387, "label": "Photo download" }
+      ]
+    },
+    {
+      "id": "sentry",
+      "type": "external",
+      "label": "Sentry",
+      "sublabel": "optional browser + API telemetry",
+      "pos": [660, 405],
+      "size": [188, 66],
+      "sources": [
+        { "path": "frontend/src/instrument.ts", "line": 1, "label": "Browser telemetry" },
+        { "path": "backend/src/instrument.ts", "line": 1, "label": "Server telemetry" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "End-user device / untrusted client",
+      "wraps": ["user", "spa"],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Vercel application boundary",
+      "wraps": ["vercel", "adapter", "security", "domain"],
+      "pad": 22
+    },
+    {
+      "kind": "security-group",
+      "label": "Supabase managed trust boundary",
+      "wraps": ["auth", "postgres", "storage"],
+      "pad": 18
+    }
+  ],
+  "connections": [
+    {
+      "id": "open_app",
+      "from": "user",
+      "to": "spa",
+      "label": "HTTPS interaction",
+      "variant": "emphasis",
+      "labelAt": [200, 275]
+    },
+    {
+      "id": "same_origin_request",
+      "from": "spa",
+      "to": "vercel",
+      "label": "Bearer JWT + /api request",
+      "variant": "security",
+      "labelAt": [320, 275]
+    },
+    {
+      "id": "api_rewrite",
+      "from": "vercel",
+      "to": "adapter",
+      "label": "same-origin rewrite",
+      "variant": "emphasis",
+      "route": "orthogonal-v",
+      "labelAt": [520, 275]
+    },
+    {
+      "id": "express_dispatch",
+      "from": "adapter",
+      "to": "security",
+      "label": "Express request",
+      "variant": "emphasis",
+      "labelAt": [625, 395]
+    },
+    {
+      "id": "authorized_call",
+      "from": "security",
+      "to": "domain",
+      "label": "authenticated + validated call",
+      "variant": "security",
+      "labelAt": [880, 400]
+    },
+    {
+      "id": "data_access",
+      "from": "domain",
+      "to": "postgres",
+      "label": "queries + RPC + audit writes",
+      "variant": "emphasis",
+      "labelAt": [1030, 392]
+    },
+    {
+      "id": "token_verification",
+      "from": "security",
+      "to": "auth",
+      "label": "verify bearer token",
+      "variant": "security",
+      "route": "orthogonal-v",
+      "labelAt": [620, 175]
+    },
+    {
+      "id": "private_files",
+      "from": "domain",
+      "to": "storage",
+      "label": "private file operations",
+      "variant": "dashed",
+      "route": "orthogonal-v",
+      "labelAt": [1080, 175]
+    },
+    {
+      "id": "server_telemetry",
+      "from": "security",
+      "to": "sentry",
+      "label": "errors + traces",
+      "variant": "dashed",
+      "route": "orthogonal-v",
+      "labelAt": [620, 392]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Primary Runtime Path",
+      "items": [
+        "User actions travel through the React SPA and same-origin Vercel routing",
+        "The Express pipeline verifies the session before domain modules execute",
+        "Payroll modules read or mutate organization-scoped state and append audit evidence"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Trust And Access Controls",
+      "items": [
+        "The browser receives only the Supabase publishable key; the service-role key stays server-side",
+        "Roles are resolved from user_roles and sensitive routes enforce role-specific decisions",
+        "Postgres RLS and private Storage buckets provide a second authorization boundary"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Supporting Runtime Detail",
+      "items": [
+        "Domain modules cover employees, invitations, HR, leave, attendance, payroll, payslips, ID cards, and exports",
+        "Zod validates runtime configuration and request payloads; Helmet, CORS, body limits, and rate limits harden HTTP",
+        "Sentry SDKs are integrated for browser and API telemetry but remain inactive until DSNs are configured"
+      ]
+    }
+  ]
+}

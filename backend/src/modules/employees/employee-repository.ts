@@ -1,6 +1,7 @@
 import { createSupabaseUserClient, getSupabaseServiceClient } from '../../lib/supabase.js'
 import { postgresUuidSchema } from '../../lib/validation.js'
 import { getUserRoles, hasAnyRole } from '../auth/roles.js'
+import { EmployeeAccountLinkError, normalizeWorkEmail, resolveEmployeeProfile } from '../auth/employee-account-link.js'
 import { employees as fixtureEmployees, type Employee } from './sample-data.js'
 import { z } from 'zod'
 
@@ -22,7 +23,7 @@ export const employeeCreateSchema = z.object({
   organizationId: postgresUuidSchema,
   profileId: postgresUuidSchema.optional(),
   status: z.enum(['draft', 'active', 'on_leave', 'exit_pending', 'inactive']).default('draft'),
-  workEmail: z.email().optional(),
+  workEmail: z.string().trim().pipe(z.email()).transform(normalizeWorkEmail).optional(),
   workLocationId: postgresUuidSchema.optional(),
 })
 
@@ -144,6 +145,11 @@ export function createEmployeeRepository(): EmployeeRepository {
         return { status: 'forbidden' }
       }
 
+      if (input.profileId && !input.workEmail) throw new EmployeeAccountLinkError('A linked account requires its matching work email.')
+      const profileId = input.workEmail
+        ? await resolveEmployeeProfile(supabase, input.organizationId, input.workEmail, undefined, input.profileId)
+        : null
+
       const { data, error } = await supabase
         .from('employees')
         .insert({
@@ -155,7 +161,7 @@ export function createEmployeeRepository(): EmployeeRepository {
           joining_date: input.joiningDate,
           location: input.location,
           organization_id: input.organizationId,
-          profile_id: input.profileId,
+          profile_id: profileId,
           status: input.status,
           work_email: input.workEmail,
           work_location_id: input.workLocationId,

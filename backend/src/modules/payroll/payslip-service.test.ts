@@ -12,6 +12,7 @@ describe('buildPayslipPdf', () => {
       },
       line: {
         calculationSnapshot: {
+          money: { currencyCode: 'INR', locale: 'en-IN' },
           attendance: {
             lossOfPayDays: 0.5,
             payableDays: 29.5,
@@ -40,6 +41,8 @@ describe('buildPayslipPdf', () => {
         totalEarnings: 83450,
       },
       organization: {
+        currencyCode: 'USD',
+        locale: 'en-US',
         legalName: 'VetanFlow Labs, Inc.',
         name: 'VetanFlow Labs',
       },
@@ -51,7 +54,8 @@ describe('buildPayslipPdf', () => {
     expect(text.startsWith('%PDF-1.4')).toBe(true)
     expect(text).toContain('PAYSLIP')
     expect(text).toContain('Aarav Mehta')
-    expect(text).toContain('USD 79,950')
+    expect(text).toContain('INR 79,950')
+    expect(text).not.toContain('USD 79,950')
     expect(text).toContain('%%EOF')
   })
 })

@@ -10,11 +10,15 @@ Use Node 24 and run:
 npm ci
 npm run deploy:check
 npm run verify
+npm run security:check -- --history
+npm audit --audit-level=moderate
 npm run demo:check
 npm run demo:check-logins
 ```
 
 Do not deploy showcase credentials or local `.env` files.
+
+Read `docs/RELEASE_READINESS.md` for the latest verified release candidate and remaining launch warnings. CI is a quality gate, not a deployment authorization. No push or deployment was made during the October 20 preparation.
 
 ## Option A: Vercel Frontend And API
 
@@ -49,8 +53,8 @@ CORS_ORIGIN=https://your-domain.example
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_PUBLISHABLE_KEY=<publishable-key>
 SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-PAYROLL_CURRENCY=USD
-PAYROLL_LOCALE=en-US
+PAYROLL_CURRENCY=INR
+PAYROLL_LOCALE=en-IN
 SENTRY_DSN=<backend-project-dsn>
 SENTRY_ENVIRONMENT=production
 SENTRY_TRACES_SAMPLE_RATE=0.05
@@ -62,14 +66,16 @@ Set these frontend build variables:
 VITE_API_BASE_URL=
 VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
-VITE_DEFAULT_CURRENCY=USD
-VITE_DEFAULT_LOCALE=en-US
+VITE_DEFAULT_CURRENCY=INR
+VITE_DEFAULT_LOCALE=en-IN
 VITE_SENTRY_DSN=<frontend-project-dsn>
 VITE_SENTRY_ENVIRONMENT=production
 VITE_SENTRY_TRACES_SAMPLE_RATE=0.05
 ```
 
 An empty `VITE_API_BASE_URL` uses same-origin `/api` in production. Never create a frontend service-role variable.
+
+Leave `DEMO_ACCESS_ENABLED` unset in hosted environments. The session shortcut also refuses production mode regardless of this variable. `/demo` uses normal password sign-in when hosted. Shared role passwords are presentation-only; rotate them and remove synthetic accounts before real use.
 
 ## Option B: Vercel Frontend And Render API
 

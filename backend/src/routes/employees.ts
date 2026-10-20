@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { requireAuth } from '../modules/auth/auth-middleware.js'
+import { EmployeeAccountLinkError } from '../modules/auth/employee-account-link.js'
 import {
   createEmployeeRepository,
   employeeCreateSchema,
@@ -61,6 +62,10 @@ export function createEmployeesRouter(repository: EmployeeRepository = createEmp
       res.status(201).json({ data: result.data, meta: { source: 'supabase' } })
     } catch (error) {
       console.error(error)
+      if (error instanceof EmployeeAccountLinkError) {
+        res.status(error.statusCode).json({ error: error.message })
+        return
+      }
       res.status(500).json({ error: 'Unable to create employee' })
     }
   })

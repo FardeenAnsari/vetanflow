@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v7
@@ -34,3 +36,9 @@ jobs:
 
       - name: Verify
         run: npm run verify
+
+      - name: Check history for secrets
+        run: npm run security:check -- --history
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate

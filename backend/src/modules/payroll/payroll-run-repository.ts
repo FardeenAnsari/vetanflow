@@ -877,6 +877,7 @@ function buildLineInsert(
   period: ReturnType<typeof getMonthBounds>,
   adjustmentsByEmployee: Map<string, PayrollAdjustment[]>,
   previousNetPayByEmployee: Map<string, number>,
+  money: { currencyCode: string; locale: string },
 ) {
   return (summary: ReturnType<typeof buildAttendanceSummaries>[number]) => {
     const adjustments = adjustmentsByEmployee.get(summary.employeeId) ?? []
@@ -905,6 +906,7 @@ function buildLineInsert(
     const netPayDeltaPercent =
       typeof previousNetPay === 'number' && previousNetPay !== 0 ? roundMoney((netPayDelta! / previousNetPay) * 100) : null
     const snapshot = {
+      money,
       adjustments: {
         items: adjustments,
         netImpact: adjustmentNetImpact,
@@ -978,6 +980,10 @@ async function replaceRunLines(
   previousNetPayByEmployee: Map<string, number>,
 ) {
   const db = supabase as any
+  const run = await supabase.from('payroll_runs').select('organization_id').eq('id', runId).single()
+  if (run.error) throw run.error
+  const organization = await supabase.from('organizations').select('currency_code, locale').eq('id', run.data.organization_id).single()
+  if (organization.error) throw organization.error
   const deleteResult = await supabase.from('payroll_run_lines').delete().eq('payroll_run_id', runId)
 
   if (deleteResult.error) {
@@ -998,6 +1004,7 @@ async function replaceRunLines(
           period,
           groupAdjustmentsByEmployee(adjustments),
           previousNetPayByEmployee,
+          { currencyCode: organization.data.currency_code, locale: organization.data.locale },
         ),
       ),
     )

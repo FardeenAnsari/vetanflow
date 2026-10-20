@@ -8,12 +8,12 @@ import App from './App.tsx'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Sentry.ErrorBoundary
-      fallback={({ resetError }) => (
+      fallback={() => (
         <main className="grid min-h-dvh place-items-center bg-[var(--vf-surface)] px-4 text-[var(--vf-navy)]">
           <section className="w-full max-w-md rounded-lg border border-[color:var(--vf-border)] bg-white p-6 text-center shadow-lg">
             <h1 className="text-xl font-semibold">Workspace could not be displayed</h1>
             <p className="mt-2 text-sm text-slate-500">The error was recorded. You can safely reload the workspace.</p>
-            <button className="mt-6 min-h-11 rounded-lg bg-[var(--vf-primary)] px-4 text-sm font-semibold text-white" onClick={resetError} type="button">
+            <button className="mt-6 min-h-11 rounded-lg bg-[var(--vf-primary)] px-4 text-sm font-semibold text-white" onClick={() => window.location.reload()} type="button">
               Reload workspace
             </button>
           </section>

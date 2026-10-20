@@ -3,9 +3,10 @@ import { getSupabaseServiceClient } from '../../lib/supabase.js'
 import { postgresUuidSchema } from '../../lib/validation.js'
 import { adminAssignableRoles, canAssignRole, invitationActorRoles } from '../auth/auth-context.js'
 import { getUserRoles, hasAnyRole } from '../auth/roles.js'
+import { EmployeeAccountLinkError, findEmployeeForAccount, linkInvitedEmployee, normalizeWorkEmail } from '../auth/employee-account-link.js'
 
 export const invitationSchema = z.object({
-  email: z.email(),
+  email: z.string().trim().pipe(z.email()).transform(normalizeWorkEmail),
   fullName: z.string().min(2).max(120),
   organizationId: postgresUuidSchema,
   role: z.enum(adminAssignableRoles),
@@ -115,6 +116,9 @@ export async function inviteUser(actorUserId: string, input: InvitationInput) {
     return { status: 'forbidden' as const }
   }
 
+  const employee = await findEmployeeForAccount(supabase, input.organizationId, input.email)
+  if (employee?.profile_id) throw new EmployeeAccountLinkError('This employee already has a login account. Use their existing account.')
+
   const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
     input.email,
     {
@@ -129,6 +133,12 @@ export async function inviteUser(actorUserId: string, input: InvitationInput) {
   }
 
   const userId = inviteData.user.id
+
+  const existingProfile = await supabase.from('profiles').select('organization_id').eq('id', userId).maybeSingle()
+  if (existingProfile.error) throw existingProfile.error
+  if (existingProfile.data?.organization_id && existingProfile.data.organization_id !== input.organizationId) {
+    throw new EmployeeAccountLinkError('This account belongs to another organization.')
+  }
 
   const { error: profileError } = await supabase.from('profiles').upsert({
     email: input.email,
@@ -150,6 +160,8 @@ export async function inviteUser(actorUserId: string, input: InvitationInput) {
   if (roleError) {
     throw roleError
   }
+
+  await linkInvitedEmployee(supabase, input.organizationId, input.email, userId)
 
   return {
     data: {

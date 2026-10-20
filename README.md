@@ -26,6 +26,8 @@
 
 ## What VetanFlow Is
 
+For a guided presentation, run `npm run demo` and open [Demo workspaces](http://localhost:5173/demo). Choose a role, follow an employee through leave and payroll, and download the resulting documents. [The demo guide](docs/DEMO_GUIDE.md) covers accounts, setup, the five-minute story, and verification. `npm run demo:users` displays local credentials; passwords are never bundled into the frontend.
+
 VetanFlow is a payroll control room for a growing organization. It does not treat payroll as an isolated calculator. It models the full path that makes a payroll result trustworthy:
 
 - controlled user access and organization membership
@@ -48,6 +50,7 @@ VetanFlow is a payroll control room for a growing organization. It does not trea
 | `/privacy` | Privacy and data-handling summary |
 | `/licenses` | Free evaluation terms and third-party open-source notices |
 | `/login` | Sign-in plus explicit switching when a Supabase session already exists |
+| `/demo` | Role picker with local presentation shortcuts and normal hosted sign-in |
 | `/app` | Authenticated VetanFlow workspace |
 
 The public site and secure workspace share one React application. `/login` owns account entry and switching; `/app` loads authenticated product workflows.
@@ -186,10 +189,12 @@ Controls already present:
 - payslips and employee photos use private Storage buckets
 - signed payslip links are issued only after an access check
 - seed credentials are written to ignored local storage with mode `0600`
-- account switching clears only the local browser session before a different user signs in
+- candidate logins are checked by the API before replacing the browser session; failed sign-in preserves the current account
+- stale data responses cannot restore the previous account's workspace
 - owner can export any organization employee ID; employees receive `404` for cross-record ID requests
 - API input and route identifiers are validated with Zod
 - Helmet, payload limits, restricted CORS, and API/invitation rate limits are active
+- API responses use `Cache-Control: no-store`; CI checks credentials, Git history, and dependency advisories
 - Sentry browser/server capture remains opt-in through deployment DSNs and does not enable default PII collection
 
 No software can honestly promise zero vulnerabilities. This project uses layered controls and automated checks; a real commercial launch should still include independent penetration testing, privacy/legal review, production secret rotation, backups, monitoring, and an incident-response process.
@@ -289,16 +294,16 @@ Vite selects the next free port when `5173` is already in use. Add that origin t
 
 The live-ready showcase contains:
 
-- 1 organization with global locale, currency, country, and timezone preferences
+- 1 organization configured for India, INR, en-IN, and Asia/Kolkata
 - 12 linked Auth users: 1 owner, 2 admins, 2 HR, 2 finance, 2 managers, 3 employees
-- 10 employees across 5 departments and 4 locations
+- 24 Indian employees across 5 departments and 4 Indian offices
 - active, leave, exit-pending, and draft employee states
 - reporting lines for leadership and manager direct reports
 - payout-ready employees and compensation revision history
 - pending, escalated, approved, rejected, and cancelled leave examples
 - current attendance with present, half-day, absent, and overtime examples
-- six historical locked payroll months
-- 216 attendance entries, 18 payroll adjustments, 54 finalized payroll lines, and 54 published payslips
+- six recent historical locked payroll months plus three retained older sample periods
+- 198 finalized INR payroll lines and published payslips, with 6,270 attendance records and 24 leave examples
 - seeded audit events and organization preferences
 
 Useful commands:
@@ -333,14 +338,16 @@ Detailed scripts:
 
 ```sh
 npm run verify
+npm run security:check -- --history
+npm audit --audit-level=moderate
 npm run deploy:check
 npm run demo:check
 npm run demo:check-logins
 ```
 
-`npm run verify` runs frontend and backend linting, strict typechecks, backend tests, and production builds. CI runs the same core checks through GitHub Actions.
+`npm run verify` scans push candidates and browser build assets for secrets, runs frontend/backend linting and strict typechecks, executes the scanner/backend/frontend tests, and builds both workspaces. CI also scans reachable Git history and audits dependencies. Local known credentials are compared without printing their values; CI performs format-based checks without production credentials.
 
-Current Phase 9 baseline: 7 test files and 62 tests, 15/15 live readiness checks, 12/12 account checks, zero npm audit vulnerabilities, and no Supabase schema lint errors.
+October 20 push-preparation verification: 103 tests (94 backend, 5 frontend, 4 secret-scanner checks), lint/typechecks/builds, 15/15 readiness checks, 12/12 live role accounts, and zero npm dependency advisories. The fresh Supabase security advisor reports one warning: leaked-password protection is disabled. Performance advice contains informational unused-index notices only. See [the release/security check](docs/RELEASE_READINESS.md) and [the earlier usability audit](docs/DEMO_USABILITY_AUDIT.md). Push readiness is not a certification for handling real payroll.
 
 ## Deployment Shape
 
@@ -367,6 +374,7 @@ Production launch work still includes custom domains, monitored email delivery, 
 | 7 | Complete | global terminology, role-specific UX, settings, access hierarchy, hardening |
 | 8 | Complete | public product site, animated tour, full showcase data, role accounts, study flow |
 | 9 | Complete | account switching, owner ID authority, six-month data, settings controls, Sentry, branding, hardening, documentation |
+| 10 | Complete | simpler workspaces, real onboarding links, INR sample-history rebuild, reconciliation, role/browser verification |
 
 Full tracker: [docs/PHASES.md](docs/PHASES.md)
 

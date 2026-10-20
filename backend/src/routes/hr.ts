@@ -3,6 +3,7 @@ import type { NextFunction, Request, Response } from 'express'
 import multer from 'multer'
 import { postgresUuidSchema } from '../lib/validation.js'
 import { requireAuth } from '../modules/auth/auth-middleware.js'
+import { EmployeeAccountLinkError } from '../modules/auth/employee-account-link.js'
 import { getEmployeeIdCardDocument } from '../modules/hr/employee-id-card-service.js'
 import {
   createHrMasterDataRepository,
@@ -36,8 +37,17 @@ export function createHrRouter(repository: HrMasterDataRepository = createHrMast
     try {
       const result = await repository.list(res.locals.auth?.accessToken)
 
+      if (result.source === 'supabase' && !result.data.currentUserRoles.length) {
+        res.status(403).json({ error: 'No workspace role is assigned to this account. Contact the organization owner.' })
+        return
+      }
+
       res.json({ data: result.data, meta: { source: result.source } })
     } catch (error) {
+      if (error instanceof HrMasterDataWriteError) {
+        res.status(error.statusCode).json({ error: error.message })
+        return
+      }
       console.error(error)
       res.status(500).json({ error: 'Unable to load HR master data' })
     }
@@ -348,7 +358,7 @@ function sendWriteResponse<T>(
 }
 
 function sendRouteError(res: Response, error: unknown, fallbackMessage: string, conflictMessage: string) {
-  if (error instanceof HrMasterDataWriteError) {
+  if (error instanceof HrMasterDataWriteError || error instanceof EmployeeAccountLinkError) {
     res.status(error.statusCode).json({ error: error.message })
     return
   }

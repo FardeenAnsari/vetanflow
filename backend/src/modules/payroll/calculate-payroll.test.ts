@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { calculatePayrollPreview } from './calculate-payroll.js'
 
 describe('calculatePayrollPreview', () => {
+  it('rejects unpaid leave beyond the payroll period', () => {
+    expect(() => calculatePayrollPreview({ employeeId: 'a', annualCompensation: 1200000, payableDays: 30, unpaidLeaveDays: 31 })).toThrow('Unpaid leave cannot exceed')
+  })
+
   it('calculates the payroll preview with retirement and local tax deductions', () => {
     const preview = calculatePayrollPreview({
       employeeId: 'emp_001',
