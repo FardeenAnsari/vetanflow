@@ -4,6 +4,7 @@ import {
   Clock3,
   History,
   LayoutDashboard,
+  UserRound,
   ShieldCheck,
   UsersRound,
   WalletCards,
@@ -22,6 +23,7 @@ type NavigationItem = {
 
 const navigationItems: NavigationItem[] = [
   { icon: LayoutDashboard, label: 'Overview', section: 'overview' },
+  { icon: UserRound, label: 'My profile & pay', section: 'self' },
   { icon: UsersRound, label: 'People', section: 'employees' },
   { icon: CalendarCheck, label: 'Leave', section: 'leave' },
   { icon: Clock3, label: 'Time & attendance', section: 'attendance' },

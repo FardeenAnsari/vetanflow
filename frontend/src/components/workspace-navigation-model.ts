@@ -2,6 +2,7 @@ export type WorkspaceRole = 'owner' | 'admin' | 'hr' | 'finance' | 'manager' | '
 
 export type WorkspaceSection =
   | 'overview'
+  | 'self'
   | 'employees'
   | 'leave'
   | 'attendance'
@@ -12,6 +13,7 @@ export type WorkspaceSection =
 
 const workspaceSections: WorkspaceSection[] = [
   'overview',
+  'self',
   'employees',
   'leave',
   'attendance',
@@ -24,9 +26,9 @@ const workspaceSections: WorkspaceSection[] = [
 const roleSections: Record<WorkspaceRole, WorkspaceSection[]> = {
   owner: workspaceSections,
   admin: workspaceSections,
-  hr: workspaceSections,
-  finance: ['overview', 'employees', 'payroll', 'audit'],
-  manager: ['overview', 'leave', 'attendance'],
+  hr: ['overview', 'self', 'employees', 'leave', 'attendance', 'payroll', 'organization', 'access'],
+  finance: ['overview', 'self', 'employees', 'payroll'],
+  manager: ['overview', 'self', 'leave', 'attendance'],
   employee: ['overview'],
 }
 

@@ -137,23 +137,23 @@ function getCredentials(ownerPassword: string): StoredCredentials {
     {
       email: 'admin.demo@vetanflow.example.com',
       employeeCode: 'VF-002',
-      fullName: 'Maya Chen',
+      fullName: 'Meera Sharma',
       key: 'admin_primary',
       role: 'admin',
     },
-    { email: 'admin.operations@vetanflow.example.com', fullName: 'Adrian Cole', key: 'admin_operations', role: 'admin' },
+    { email: 'admin.operations@vetanflow.example.com', employeeCode: 'VF-011', fullName: 'Aditya Nair', key: 'admin_operations', role: 'admin' },
     {
       email: 'hr.demo@vetanflow.example.com',
       employeeCode: 'VF-003',
-      fullName: 'Olivia Bennett',
+      fullName: 'Ananya Iyer',
       key: 'hr_primary',
       role: 'hr',
     },
-    { email: 'hr.partner@vetanflow.example.com', employeeCode: 'VF-010', fullName: 'Grace Kim', key: 'hr_partner', role: 'hr' },
+    { email: 'hr.partner@vetanflow.example.com', employeeCode: 'VF-010', fullName: 'Kavya Joshi', key: 'hr_partner', role: 'hr' },
     {
       email: 'finance.demo@vetanflow.example.com',
       employeeCode: 'VF-004',
-      fullName: 'Ethan Brooks',
+      fullName: 'Rohan Verma',
       key: 'finance_primary',
       role: 'finance',
     },
@@ -161,20 +161,20 @@ function getCredentials(ownerPassword: string): StoredCredentials {
     {
       email: 'manager.demo@vetanflow.example.com',
       employeeCode: 'VF-005',
-      fullName: 'Sofia Ramirez',
+      fullName: 'Sneha Rao',
       key: 'manager_primary',
       role: 'manager',
     },
-    { email: 'manager.success@vetanflow.example.com', fullName: 'Liam Parker', key: 'manager_success', role: 'manager' },
+    { email: 'manager.success@vetanflow.example.com', employeeCode: 'VF-012', fullName: 'Vikram Desai', key: 'manager_success', role: 'manager' },
     {
       email: 'employee.demo@vetanflow.example.com',
       employeeCode: 'VF-006',
-      fullName: 'Noah Williams',
+      fullName: 'Aarav Mehta',
       key: 'employee_primary',
       role: 'employee',
     },
     { email: 'amina.yusuf@vetanflow.example.com', employeeCode: 'VF-007', fullName: 'Amina Yusuf', key: 'employee_customer', role: 'employee' },
-    { email: 'lucas.martin@vetanflow.example.com', employeeCode: 'VF-008', fullName: 'Lucas Martin', key: 'employee_quality', role: 'employee' },
+    { email: 'arjun.patel@vetanflow.example.com', employeeCode: 'VF-008', fullName: 'Arjun Patel', key: 'employee_quality', role: 'employee' },
   ]
 
   return {
@@ -203,7 +203,11 @@ async function findAuthUserByEmail(supabase: any, email: string) {
 }
 
 async function ensureAuthUser(supabase: any, credential: DemoCredential) {
+  const previous = existsSync(credentialPath)
+    ? (JSON.parse(readFileSync(credentialPath, 'utf8')) as StoredCredentials).users.find((user) => user.key === credential.key)
+    : null
   const existing = await findAuthUserByEmail(supabase, credential.email)
+    ?? (previous && previous.email !== credential.email ? await findAuthUserByEmail(supabase, previous.email) : null)
   const payload = {
     email: credential.email,
     email_confirm: true,
@@ -247,7 +251,7 @@ function getCurrentWorkDates() {
   const end = new Date(Math.max(start.getTime(), addDays(today, -1).getTime()))
   const dates: string[] = []
 
-  for (let cursor = new Date(start); cursor <= end && dates.length < 9; cursor = addDays(cursor, 1)) {
+  for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
     const day = cursor.getUTCDay()
 
     if (day !== 0 && day !== 6) {
@@ -284,24 +288,28 @@ if (!supabase) {
 
 const existingShowcaseOrganization = await query(
   'existing showcase organization safety check',
-  supabase.from('organizations').select('id,name').eq('id', organizationId).maybeSingle(),
+  supabase.from('organizations').select('id,name,currency_code').eq('id', organizationId).maybeSingle(),
 )
 
 if (existingShowcaseOrganization && existingShowcaseOrganization.name !== 'VetanFlow Labs') {
   throw new Error(`Refusing to reset organization ${organizationId}: expected VetanFlow Labs.`)
+}
+if (existingShowcaseOrganization && existingShowcaseOrganization.currency_code !== 'INR') {
+  const runs = await query('currency safety check', supabase.from('payroll_runs').select('id').eq('organization_id', organizationId).limit(1))
+  if (runs.length) throw new Error('Refusing to relabel historical payroll in another currency. Migrate its amounts explicitly first.')
 }
 
 await query(
   'showcase organization',
   supabase.from('organizations').upsert(
     {
-      country_code: 'US',
-      currency_code: 'USD',
+      country_code: 'IN',
+      currency_code: 'INR',
       id: organizationId,
-      legal_name: 'VetanFlow Labs Incorporated',
-      locale: 'en-US',
+      legal_name: 'VetanFlow Labs Private Limited',
+      locale: 'en-IN',
       name: 'VetanFlow Labs',
-      timezone: 'America/New_York',
+      timezone: 'Asia/Kolkata',
     },
     { onConflict: 'id' },
   ),
@@ -319,33 +327,6 @@ for (const credential of credentials.users) {
   }
 }
 
-const authUserIds = credentials.users.map((credential) => authUsersByKey.get(credential.key).id as string)
-
-const organizationProfiles = await query(
-  'organization profiles',
-  supabase.from('profiles').select('id,email').eq('organization_id', organizationId),
-)
-const obsoleteProfileIds = organizationProfiles
-  .filter(
-    (profile: { email: string | null; id: string }) =>
-      !authUserIds.includes(profile.id) && profile.email?.endsWith('@vetanflow.example.com'),
-  )
-  .map((profile: { id: string }) => profile.id)
-const managedProfileIds = [...authUserIds, ...obsoleteProfileIds]
-
-await query(
-  'clear managed employee profile links',
-  supabase.from('employees').update({ profile_id: null }).eq('organization_id', organizationId).in('profile_id', managedProfileIds),
-)
-await query(
-  'clear managed role assignments',
-  supabase.from('user_roles').delete().eq('organization_id', organizationId).in('user_id', managedProfileIds),
-)
-
-if (obsoleteProfileIds.length) {
-  await query('remove obsolete demo profiles', supabase.from('profiles').delete().in('id', obsoleteProfileIds))
-}
-
 await query(
   'showcase profiles',
   supabase.from('profiles').upsert(
@@ -360,14 +341,22 @@ await query(
   ),
 )
 
+for (const credential of credentials.users) {
+  await query(
+    'normalize managed demo role',
+    supabase.from('user_roles').delete().eq('organization_id', organizationId)
+      .eq('user_id', authUsersByKey.get(credential.key).id).neq('role', credential.role),
+  )
+}
 await query(
   'showcase role assignments',
-  supabase.from('user_roles').insert(
+  supabase.from('user_roles').upsert(
     credentials.users.map((credential) => ({
       organization_id: organizationId,
       role: credential.role,
       user_id: authUsersByKey.get(credential.key).id,
     })),
+    { onConflict: 'organization_id,user_id,role' },
   ),
 )
 
@@ -379,10 +368,10 @@ const departments = [
   { id: '10000000-0000-0000-0000-000000000005', name: 'Customer Success' },
 ]
 const locations = [
-  { city: 'New York', country_code: 'US', id: '20000000-0000-0000-0000-000000000001', name: 'New York HQ', state: 'New York' },
-  { city: 'Austin', country_code: 'US', id: '20000000-0000-0000-0000-000000000002', name: 'Austin Office', state: 'Texas' },
-  { city: 'Seattle', country_code: 'US', id: '20000000-0000-0000-0000-000000000003', name: 'Seattle Hub', state: 'Washington' },
-  { city: 'Toronto', country_code: 'CA', id: '20000000-0000-0000-0000-000000000004', name: 'Toronto Studio', state: 'Ontario' },
+  { city: 'Mumbai', country_code: 'IN', id: '20000000-0000-0000-0000-000000000001', name: 'Mumbai HQ', state: 'Maharashtra' },
+  { city: 'Pune', country_code: 'IN', id: '20000000-0000-0000-0000-000000000002', name: 'Pune Office', state: 'Maharashtra' },
+  { city: 'Bengaluru', country_code: 'IN', id: '20000000-0000-0000-0000-000000000003', name: 'Bengaluru Hub', state: 'Karnataka' },
+  { city: 'Hyderabad', country_code: 'IN', id: '20000000-0000-0000-0000-000000000004', name: 'Hyderabad Office', state: 'Telangana' },
 ]
 
 await query(
@@ -403,36 +392,60 @@ await query(
 const departmentId = Object.fromEntries(departments.map((department) => [department.name, department.id]))
 const locationId = Object.fromEntries(locations.map((location) => [location.name, location.id]))
 const credentialByKey = new Map(credentials.users.map((credential) => [credential.key, credential]))
-const employeeDefinitions = [
-  { annual: 192000, code: 'VF-001', department: 'Operations', designation: 'Founder & Owner', location: 'New York HQ', name: 'Fardeen Ansari', profileKey: 'owner_primary', status: 'active' },
-  { annual: 138000, code: 'VF-002', department: 'Operations', designation: 'Platform Administrator', location: 'New York HQ', name: 'Maya Chen', profileKey: 'admin_primary', status: 'active' },
-  { annual: 124000, code: 'VF-003', department: 'People', designation: 'People Operations Lead', location: 'Toronto Studio', name: 'Olivia Bennett', profileKey: 'hr_primary', status: 'active' },
-  { annual: 132000, code: 'VF-004', department: 'Finance', designation: 'Payroll Controller', location: 'Austin Office', name: 'Ethan Brooks', profileKey: 'finance_primary', status: 'active' },
-  { annual: 146000, code: 'VF-005', department: 'Engineering', designation: 'Engineering Manager', location: 'Seattle Hub', name: 'Sofia Ramirez', profileKey: 'manager_primary', status: 'active' },
-  { annual: 108000, code: 'VF-006', department: 'Engineering', designation: 'Product Engineer', location: 'Seattle Hub', name: 'Noah Williams', profileKey: 'employee_primary', status: 'active' },
-  { annual: 96000, code: 'VF-007', department: 'Customer Success', designation: 'Customer Success Partner', location: 'Toronto Studio', name: 'Amina Yusuf', profileKey: 'employee_customer', status: 'active' },
-  { annual: 102000, code: 'VF-008', department: 'Engineering', designation: 'Quality Engineer', location: 'Seattle Hub', name: 'Lucas Martin', profileKey: 'employee_quality', status: 'on_leave' },
-  { annual: 118000, code: 'VF-009', department: 'Finance', designation: 'Financial Analyst', location: 'Austin Office', name: 'Priya Shah', profileKey: 'finance_analyst', status: 'exit_pending' },
-  { annual: 84000, code: 'VF-010', department: 'People', designation: 'People Coordinator', location: 'New York HQ', name: 'Grace Kim', profileKey: 'hr_partner', status: 'draft' },
-] as const
+type SeedEmployee = {
+  annual: number; code: string; department: string; designation: string; location: string
+  name: string; profileKey: string | null; status: 'active' | 'on_leave' | 'exit_pending' | 'draft' | 'inactive'
+}
+const employeeDefinitions: SeedEmployee[] = [
+  { annual: 1920000, code: 'VF-001', department: 'Operations', designation: 'Founder & Owner', location: 'Mumbai HQ', name: 'Fardeen Ansari', profileKey: 'owner_primary', status: 'active' },
+  { annual: 1380000, code: 'VF-002', department: 'Operations', designation: 'Platform Administrator', location: 'Mumbai HQ', name: 'Meera Sharma', profileKey: 'admin_primary', status: 'active' },
+  { annual: 1240000, code: 'VF-003', department: 'People', designation: 'People Operations Lead', location: 'Hyderabad Office', name: 'Ananya Iyer', profileKey: 'hr_primary', status: 'active' },
+  { annual: 1320000, code: 'VF-004', department: 'Finance', designation: 'Payroll Controller', location: 'Pune Office', name: 'Rohan Verma', profileKey: 'finance_primary', status: 'active' },
+  { annual: 1460000, code: 'VF-005', department: 'Engineering', designation: 'Engineering Manager', location: 'Bengaluru Hub', name: 'Sneha Rao', profileKey: 'manager_primary', status: 'active' },
+  { annual: 1080000, code: 'VF-006', department: 'Engineering', designation: 'Product Engineer', location: 'Bengaluru Hub', name: 'Aarav Mehta', profileKey: 'employee_primary', status: 'active' },
+  { annual: 960000, code: 'VF-007', department: 'Customer Success', designation: 'Customer Success Partner', location: 'Hyderabad Office', name: 'Amina Yusuf', profileKey: 'employee_customer', status: 'active' },
+  { annual: 1020000, code: 'VF-008', department: 'Engineering', designation: 'Quality Engineer', location: 'Bengaluru Hub', name: 'Arjun Patel', profileKey: 'employee_quality', status: 'on_leave' },
+  { annual: 1180000, code: 'VF-009', department: 'Finance', designation: 'Financial Analyst', location: 'Pune Office', name: 'Priya Shah', profileKey: 'finance_analyst', status: 'exit_pending' },
+  { annual: 840000, code: 'VF-010', department: 'People', designation: 'People Coordinator', location: 'Mumbai HQ', name: 'Kavya Joshi', profileKey: 'hr_partner', status: 'active' },
+  { annual: 1260000, code: 'VF-011', department: 'Operations', designation: 'Operations Administrator', location: 'Mumbai HQ', name: 'Aditya Nair', profileKey: 'admin_operations', status: 'active' },
+  { annual: 1400000, code: 'VF-012', department: 'Customer Success', designation: 'Customer Success Manager', location: 'Hyderabad Office', name: 'Vikram Desai', profileKey: 'manager_success', status: 'active' },
+  ...[
+    ['Zara Ahmed', 'Engineering', 'Backend Engineer', 1120000],
+    ['Dev Malhotra', 'Engineering', 'Product Designer', 1050000],
+    ['Ishita Sen', 'Engineering', 'Data Engineer', 1160000],
+    ['Kabir Sethi', 'Customer Success', 'Account Specialist', 780000],
+    ['Neha Menon', 'Customer Success', 'Support Lead', 880000],
+    ['Samira Hassan', 'People', 'Talent Partner', 920000],
+    ['Sanjay Gupta', 'Finance', 'Accounts Specialist', 860000],
+    ['Pooja Kulkarni', 'Operations', 'Office Coordinator', 680000],
+    ['Arjun Rao', 'Engineering', 'Platform Engineer', 1220000],
+    ['Riya Kapoor', 'Customer Success', 'Onboarding Specialist', 820000],
+    ['Yash Agarwal', 'Engineering', 'Graduate Engineer', 720000],
+    ['Diya Shah', 'Operations', 'Operations Associate', 640000],
+  ].map(([name, department, designation, annual], index): SeedEmployee => ({
+    annual: Number(annual), code: `VF-${String(index + 13).padStart(3, '0')}`,
+    department: String(department), designation: String(designation), location: index % 2 ? 'Hyderabad Office' : 'Bengaluru Hub',
+    name: String(name), profileKey: null, status: index === 10 ? 'draft' : index === 11 ? 'inactive' : 'active',
+  })),
+]
 
 const employeeRows = employeeDefinitions.map((employee, index) => ({
   annual_compensation: employee.annual,
   bank_account_holder_name: employee.name,
   bank_account_number: `900000000${String(index + 1).padStart(3, '0')}`,
-  bank_name: index % 2 === 0 ? 'VetanFlow Demo Bank' : 'Northstar Demo Credit Union',
-  bank_routing_code: String(21_000_021 + index).padStart(9, '0'),
+  bank_name: index % 2 === 0 ? 'HDFC Bank (sample account)' : 'State Bank of India (sample account)',
+  bank_routing_code: index % 2 === 0 ? 'HDFC0001234' : 'SBIN0001234',
   department_id: departmentId[employee.department],
   designation: employee.designation,
   employee_code: employee.code,
   full_name: employee.name,
   joining_date: `${2023 + (index % 3)}-${String((index % 9) + 1).padStart(2, '0')}-15`,
-  location: locations.find((location) => location.id === locationId[employee.location])?.city ?? 'New York',
+  location: locations.find((location) => location.id === locationId[employee.location])?.city ?? 'Mumbai',
   organization_id: organizationId,
-  profile_id: authUsersByKey.get(employee.profileKey).id,
+  profile_id: employee.profileKey ? authUsersByKey.get(employee.profileKey).id : null,
   status: employee.status,
   updated_at: new Date().toISOString(),
-  work_email: credentialByKey.get(employee.profileKey)?.email ?? null,
+  work_email: employee.profileKey ? credentialByKey.get(employee.profileKey)?.email : `${employee.name.toLowerCase().replaceAll(' ', '.')}@vetanflow.example.com`,
   work_location_id: locationId[employee.location],
 }))
 
@@ -451,15 +464,15 @@ await query(
     .from('employees')
     .update({ manager_employee_id: employeeId['VF-005'], manager_profile_id: managerProfileId })
     .eq('organization_id', organizationId)
-    .in('employee_code', ['VF-006', 'VF-008']),
+    .in('employee_code', ['VF-006', 'VF-008', 'VF-013', 'VF-014', 'VF-015', 'VF-021', 'VF-023']),
 )
 await query(
   'customer success reporting line',
   supabase
     .from('employees')
-    .update({ manager_employee_id: employeeId['VF-005'], manager_profile_id: authUsersByKey.get('manager_success').id })
+    .update({ manager_employee_id: employeeId['VF-012'], manager_profile_id: authUsersByKey.get('manager_success').id })
     .eq('organization_id', organizationId)
-    .eq('employee_code', 'VF-007'),
+    .in('employee_code', ['VF-007', 'VF-016', 'VF-017', 'VF-022']),
 )
 await query(
   'leadership reporting lines',
@@ -467,12 +480,7 @@ await query(
     .from('employees')
     .update({ manager_employee_id: employeeId['VF-001'], manager_profile_id: authUsers.get('owner').id })
     .eq('organization_id', organizationId)
-    .in('employee_code', ['VF-002', 'VF-003', 'VF-004', 'VF-005']),
-)
-
-await query(
-  'remove stale showcase compensation history',
-  supabase.from('salary_revisions').delete().eq('organization_id', organizationId),
+    .in('employee_code', ['VF-002', 'VF-003', 'VF-004', 'VF-005', 'VF-011', 'VF-012']),
 )
 
 await query(
@@ -480,12 +488,13 @@ await query(
   supabase.from('salary_revisions').upsert(
     employeeDefinitions.flatMap((employee, index) => {
       const joiningYear = Number(employeeRows[index].joining_date.slice(0, 4))
-      const totalYears = 2026 - joiningYear
+      const currentYear = new Date().getUTCFullYear()
+      const totalYears = currentYear - joiningYear
       const startingSalary = Math.round(employee.annual / Math.pow(1.08, totalYears))
       
       const base = {
         created_by: authUsers.get(index < 2 ? 'owner' : 'hr').id,
-        currency_code: 'USD',
+        currency_code: 'INR',
         employee_id: employeeId[employee.code],
         organization_id: organizationId,
       }
@@ -497,10 +506,10 @@ await query(
         reason: 'Showcase compensation baseline'
       }]
 
-      for (let year = joiningYear + 1; year <= 2026; year++) {
+      for (let year = joiningYear + 1; year <= currentYear; year++) {
         rows.push({
           ...base,
-          annual_compensation: Math.round(employee.annual / Math.pow(1.08, 2026 - year)),
+          annual_compensation: Math.round(employee.annual / Math.pow(1.08, currentYear - year)),
           effective_from: `${year}-01-01`,
           reason: 'Annual compensation review',
         })
@@ -525,6 +534,22 @@ const leaveRows = [
   { approval_stage: 'closed', decision_note: 'Approved with team coverage confirmed', employee_id: employeeId['VF-008'], id: '31000000-0000-0000-0000-000000000003', leave_type: 'medical', reason: 'Recovery time', requested_by: authUsers.get('hr').id, reviewed_at: new Date().toISOString(), reviewed_by: authUsers.get('hr').id, status: 'approved', ...leaveDates[2] },
   { approval_stage: 'closed', decision_note: 'Critical release coverage required', employee_id: employeeId['VF-006'], id: '31000000-0000-0000-0000-000000000004', leave_type: 'personal', reason: 'Personal appointment', requested_by: authUsers.get('employee').id, reviewed_at: new Date().toISOString(), reviewed_by: authUsers.get('manager').id, status: 'rejected', ...leaveDates[3] },
   { approval_stage: 'closed', decision_note: 'Request withdrawn by employee', employee_id: employeeId['VF-006'], id: '31000000-0000-0000-0000-000000000005', leave_type: 'vacation', reason: 'Travel plans changed', requested_by: authUsers.get('employee').id, reviewed_at: new Date().toISOString(), reviewed_by: authUsers.get('employee').id, status: 'cancelled', ...leaveDates[4] },
+  ...employeeDefinitions.slice(0, 19).map((employee, index) => {
+    const status = ['pending', 'approved', 'rejected', 'cancelled'][index % 4]
+    const dates = getLeaveDates(status === 'pending' ? 14 + index : -25 + index, 1 + index % 2)
+    return {
+      id: `31000000-0000-0000-0000-${String(index + 6).padStart(12, '0')}`,
+      employee_id: employeeId[employee.code],
+      leave_type: ['vacation', 'medical', 'personal'][index % 3],
+      reason: ['Planned time off with handover arranged', 'Medical appointment', 'Family commitment'][index % 3],
+      status, approval_stage: status === 'pending' ? 'hr' : 'closed',
+      decision_note: status === 'pending' ? null : status === 'approved' ? 'Coverage confirmed by the team' : status === 'rejected' ? 'Please choose dates outside the team release window' : 'Plans changed; request withdrawn',
+      requested_by: employee.profileKey ? authUsersByKey.get(employee.profileKey).id : authUsers.get('hr').id,
+      reviewed_at: status === 'pending' ? null : new Date().toISOString(),
+      reviewed_by: status === 'pending' ? null : authUsers.get('hr').id,
+      ...dates,
+    }
+  }),
 ].map(({ endDate, startDate, ...row }) => ({
   ...row,
   end_date: endDate,
@@ -545,7 +570,7 @@ let attendanceCount = 0
 
 if (!currentLock) {
   const workDates = getCurrentWorkDates()
-  const attendanceEmployeeCodes = ['VF-002', 'VF-003', 'VF-004', 'VF-005', 'VF-006', 'VF-007']
+  const attendanceEmployeeCodes = employeeDefinitions.filter((employee) => ['active', 'on_leave', 'exit_pending'].includes(employee.status)).map((employee) => employee.code)
   const attendanceRows = attendanceEmployeeCodes.flatMap((code, employeeIndex) =>
     workDates.map((workDate, dateIndex) => {
       const isHalfDay = code === 'VF-006' && dateIndex === Math.min(2, workDates.length - 1)

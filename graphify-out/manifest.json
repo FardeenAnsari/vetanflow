@@ -95,18 +95,18 @@
     "semantic_hash": ""
   },
   "backend/src/app.test.ts": {
-    "mtime": 1784199380.2150378,
-    "ast_hash": "d5e9107176ed45457ebb60b76adafd10",
+    "mtime": 1792240730.7388787,
+    "ast_hash": "33c5666e0ee81fe85dff5c8d4c894801",
     "semantic_hash": ""
   },
   "backend/src/app.ts": {
-    "mtime": 1784197493.1747463,
-    "ast_hash": "68dc40cde7ce78406f3d4921c3983ecd",
+    "mtime": 1792239670.7225664,
+    "ast_hash": "4fae7ea8ae61f3afbc6f58060eaa7564",
     "semantic_hash": ""
   },
   "backend/src/config/env.ts": {
-    "mtime": 1784197492.8473423,
-    "ast_hash": "e6bacd5b7f3450c47711eeb0de3658f4",
+    "mtime": 1792241348.750066,
+    "ast_hash": "771e605cc492daffdeb5f8441666eb9e",
     "semantic_hash": ""
   },
   "backend/src/lib/database.types.ts": {
@@ -140,38 +140,38 @@
     "semantic_hash": ""
   },
   "backend/src/modules/employees/employee-repository.ts": {
-    "mtime": 1784186573.5075417,
-    "ast_hash": "c08e765eaa139b9c3373ae2ee4fe4f1c",
+    "mtime": 1792241586.4533973,
+    "ast_hash": "2671398ad88b1d7e4ff74d8f5af5751c",
     "semantic_hash": ""
   },
   "backend/src/modules/employees/sample-data.ts": {
-    "mtime": 1784186573.50822,
-    "ast_hash": "87c406f5ba8bd21c1a8db33d4402b2af",
+    "mtime": 1792241420.510367,
+    "ast_hash": "e54a42d66c92abfbbe54267bcb12b135",
     "semantic_hash": ""
   },
   "backend/src/modules/hr/hr-master-data-repository.ts": {
-    "mtime": 1784186745.9932878,
-    "ast_hash": "1a430522914827776bb3d51681789f29",
+    "mtime": 1792241658.7957134,
+    "ast_hash": "3e5eff7072be58b2976ad3809f7dc558",
     "semantic_hash": ""
   },
   "backend/src/modules/invitations/invitation-service.ts": {
-    "mtime": 1784183634.9112954,
-    "ast_hash": "b4037cf8f113dcf91d3f34335d56ee59",
+    "mtime": 1792241375.4730065,
+    "ast_hash": "075a40921aca58fbdb24b7feb6542c73",
     "semantic_hash": ""
   },
   "backend/src/modules/payroll/calculate-payroll.test.ts": {
-    "mtime": 1784186573.5095112,
-    "ast_hash": "2c5848ba8690ece20a3ee3785eeb2524",
+    "mtime": 1792241473.9484594,
+    "ast_hash": "e1b98cbb5ef137616db7e12c4bba8ef0",
     "semantic_hash": ""
   },
   "backend/src/modules/payroll/calculate-payroll.ts": {
-    "mtime": 1784186573.5098972,
-    "ast_hash": "c63d0367e97594cfcea4574ea9b670c2",
+    "mtime": 1792241473.903884,
+    "ast_hash": "fcbdabe6015a251300cebb9ddd2e34e1",
     "semantic_hash": ""
   },
   "backend/src/routes/employees.ts": {
-    "mtime": 1783137023.0049384,
-    "ast_hash": "f95de2ab9e134b5766198635c6927703",
+    "mtime": 1792241586.4773905,
+    "ast_hash": "73caed1fe3358d0075c0c2666ce8f147",
     "semantic_hash": ""
   },
   "backend/src/routes/health.ts": {
@@ -180,13 +180,13 @@
     "semantic_hash": ""
   },
   "backend/src/routes/hr.ts": {
-    "mtime": 1784192110.9711483,
-    "ast_hash": "adc7d2e68aae363e3711b7d495ee22c0",
+    "mtime": 1792241375.4517438,
+    "ast_hash": "8e1894302e38ded2afc130408e2f5aa3",
     "semantic_hash": ""
   },
   "backend/src/routes/invitations.ts": {
-    "mtime": 1784191409.442782,
-    "ast_hash": "a5c0dce80761ecdced6d6d01e893c814",
+    "mtime": 1792241375.4934418,
+    "ast_hash": "d691161fac3e05da8ff313539cf9e6a9",
     "semantic_hash": ""
   },
   "backend/src/routes/payroll.ts": {
@@ -220,8 +220,8 @@
     "semantic_hash": ""
   },
   "frontend/src/App.tsx": {
-    "mtime": 1784199204.9919875,
-    "ast_hash": "b8f7ba64f6d212184f9815e04a822785",
+    "mtime": 1792240875.6160135,
+    "ast_hash": "dee42195bf32232c03263a8c5b614e0e",
     "semantic_hash": ""
   },
   "frontend/src/components/Folder.tsx": {
@@ -230,8 +230,8 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/supabase.ts": {
-    "mtime": 1783136893.8745468,
-    "ast_hash": "c22d052059fe77e8af582ae1410581e9",
+    "mtime": 1792240435.379411,
+    "ast_hash": "ce4a181e0e843247735342bf2b4607d7",
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1784197494.502515,
-    "ast_hash": "7e5d18e095f2806d4f52ac4a696a9d8c",
+    "mtime": 1792240314.7877212,
+    "ast_hash": "89e83776f1a931167b9d3b75292eb185",
     "semantic_hash": ""
   },
   "scripts/update-handoff.mjs": {
@@ -360,8 +360,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1784200323.462586,
-    "ast_hash": "7a4ca77d434329b64b3b9c085d3bfa37",
+    "mtime": 1792243170.5276172,
+    "ast_hash": "402d1b251a0ded1ee79dc74db8069775",
     "semantic_hash": ""
   },
   "docs/ARCHITECTURE.md": {
@@ -380,13 +380,13 @@
     "semantic_hash": ""
   },
   "docs/HANDOFF.md": {
-    "mtime": 1784200332.2572613,
-    "ast_hash": "14dcb71970023916a5e8dcbeb1e138d0",
+    "mtime": 1792243247.6210907,
+    "ast_hash": "9e43a17af3284fa677b117744487eec6",
     "semantic_hash": ""
   },
   "docs/PHASES.md": {
-    "mtime": 1784200193.6510193,
-    "ast_hash": "93a07d67a344c524adab649b946b7d92",
+    "mtime": 1792243212.1695607,
+    "ast_hash": "c3b191e29cec3b7670cc034518f5586f",
     "semantic_hash": ""
   },
   "docs/PLAN.md": {
@@ -500,8 +500,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/leave/leave-repository.ts": {
-    "mtime": 1784182071.9761858,
-    "ast_hash": "6ed020be601001fa260fd8add8a3c283",
+    "mtime": 1784254670.1562417,
+    "ast_hash": "490b70605c9c50630eed5ec736e34cc2",
     "semantic_hash": ""
   },
   "backend/src/routes/leave.ts": {
@@ -515,8 +515,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/attendance/attendance-repository.ts": {
-    "mtime": 1784186573.5067706,
-    "ast_hash": "776ae6e14ed4d35b5e04d91ddf5e501c",
+    "mtime": 1784254696.29401,
+    "ast_hash": "5b2e088808408b8791e25c28a100cde7",
     "semantic_hash": ""
   },
   "backend/src/routes/attendance.ts": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "backend/src/modules/payroll/payroll-run-repository.ts": {
-    "mtime": 1784197858.2304091,
-    "ast_hash": "5d59083b28297e7c6b8e0569944d1ff7",
+    "mtime": 1792241420.634303,
+    "ast_hash": "4a2143e41806849a2a98989c25e47c70",
     "semantic_hash": ""
   },
   ".codex/screenshots/phase4c-payroll-adjustments.png": {
@@ -550,13 +550,13 @@
     "semantic_hash": ""
   },
   "backend/src/modules/payroll/payslip-service.test.ts": {
-    "mtime": 1784186626.4560628,
-    "ast_hash": "26bb0f4537f2a4dcc7cb4b240b0641e2",
+    "mtime": 1792241487.4484355,
+    "ast_hash": "be5f2d88c05bfd1ab9daee2de06915fc",
     "semantic_hash": ""
   },
   "backend/src/modules/payroll/payslip-service.ts": {
-    "mtime": 1784186626.3227787,
-    "ast_hash": "3cefb3d876cbc95a2aae8368979b187b",
+    "mtime": 1792241420.6589806,
+    "ast_hash": "ff62162bc7032f33358b3e627ab5cee4",
     "semantic_hash": ""
   },
   "supabase/migrations/20260704172926_complete_phase_3_attendance.sql": {
@@ -615,8 +615,8 @@
     "semantic_hash": ""
   },
   "scripts/prepare-demo-data.ts": {
-    "mtime": 1784197858.4798303,
-    "ast_hash": "00ec4eb69fd28de7199326d5be46ea96",
+    "mtime": 1792243031.240948,
+    "ast_hash": "e902d24fc045fd882f90975273dc3eb9",
     "semantic_hash": ""
   },
   "scripts/sql/reset-demo-data.sql": {
@@ -635,8 +635,8 @@
     "semantic_hash": ""
   },
   "docs/DEPLOYMENT.md": {
-    "mtime": 1784200166.2193358,
-    "ast_hash": "314071ffd1fd68e681f8c92e9a2a37f5",
+    "mtime": 1784201668.470581,
+    "ast_hash": "c535a0d209d6107ddfcd136f28ae4e38",
     "semantic_hash": ""
   },
   "docs/RECORDED_DEMO_SCRIPT.md": {
@@ -655,33 +655,33 @@
     "semantic_hash": ""
   },
   "docs/screenshots/employee-desktop.png": {
-    "mtime": 1784193193.302221,
-    "ast_hash": "bb3aead472d021eae1f756c133592fa6",
+    "mtime": 1784256294.8857384,
+    "ast_hash": "4702f0ca9ceea400ae504d5238f2c7d3",
     "semantic_hash": ""
   },
   "docs/screenshots/employee-mobile.png": {
-    "mtime": 1784193197.0127718,
-    "ast_hash": "a05a458035e65964f62d2bba4e74d235",
+    "mtime": 1784256300.265284,
+    "ast_hash": "ce086b850033254b65feda46ce946e14",
     "semantic_hash": ""
   },
   "docs/screenshots/owner-desktop.png": {
-    "mtime": 1784193185.306462,
-    "ast_hash": "65b685fd9ecb6e5286f7ba176ed1841c",
+    "mtime": 1784256284.9054642,
+    "ast_hash": "3a8222dc9add2e73dea1c344503e5673",
     "semantic_hash": ""
   },
   "docs/screenshots/owner-mobile.png": {
-    "mtime": 1784193189.2693617,
-    "ast_hash": "c47682134b74474c7cf3bce3db25d0c7",
+    "mtime": 1784256290.1160138,
+    "ast_hash": "ca85db14f6be407f1f81615f91708cd3",
     "semantic_hash": ""
   },
   "docs/screenshots/sign-in-desktop.png": {
-    "mtime": 1784154340.8872218,
-    "ast_hash": "4a649168297e869ee10008dbce3541ed",
+    "mtime": 1784255828.4387639,
+    "ast_hash": "c406b202bf03c6c55ff1917d35ca40de",
     "semantic_hash": ""
   },
   "docs/screenshots/sign-in-mobile.png": {
-    "mtime": 1784154380.2118046,
-    "ast_hash": "c5157c52274617605753453fc9671503",
+    "mtime": 1784255845.204837,
+    "ast_hash": "8e448b49fc2308518a36d294341314d5",
     "semantic_hash": ""
   },
   "backend/src/modules/auth/auth-context.test.ts": {
@@ -700,13 +700,13 @@
     "semantic_hash": ""
   },
   "frontend/src/components/WorkspaceNavigation.tsx": {
-    "mtime": 1784182783.1382756,
-    "ast_hash": "a95017b634e8afb4625f99bc0510bf5a",
+    "mtime": 1792240242.5833232,
+    "ast_hash": "3e88ea7dbecffae6838c72745408e8aa",
     "semantic_hash": ""
   },
   "frontend/src/components/workspace-navigation-model.ts": {
-    "mtime": 1784182783.0065286,
-    "ast_hash": "50e487c00fbb955902c4bd29fe42a8ba",
+    "mtime": 1792240242.563016,
+    "ast_hash": "8d805c4311d3080fcbab4f7409a86cdd",
     "semantic_hash": ""
   },
   "scripts/check-deploy-readiness.mjs": {
@@ -750,8 +750,8 @@
     "semantic_hash": ""
   },
   "frontend/src/public-site/PublicSite.tsx": {
-    "mtime": 1784197422.3738856,
-    "ast_hash": "9b682fed8f743ce28ffb0ab4b3f2cce9",
+    "mtime": 1792239820.3744512,
+    "ast_hash": "1cf0a055e328854105d064cec3f96813",
     "semantic_hash": ""
   },
   "frontend/src/public-site/WorkflowTour.tsx": {
@@ -770,8 +770,8 @@
     "semantic_hash": ""
   },
   "scripts/check-demo-logins.ts": {
-    "mtime": 1784198143.0753095,
-    "ast_hash": "0ec3fb966eb1904f84369d26126fce7e",
+    "mtime": 1792241658.845586,
+    "ast_hash": "b452b4e434a025f0d8d59e70d30a8cb0",
     "semantic_hash": ""
   },
   "scripts/clean-showcase-storage.ts": {
@@ -780,8 +780,8 @@
     "semantic_hash": ""
   },
   "scripts/seed-showcase-data.ts": {
-    "mtime": 1784198959.3844805,
-    "ast_hash": "beb2408dac0a167d54be292fa74a4044",
+    "mtime": 1792241473.971281,
+    "ast_hash": "f2cf57dfdf176fd54e50bfe7e28a9f93",
     "semantic_hash": ""
   },
   "supabase/migrations/20260716083952_add_fk_indexes.sql": {
@@ -805,8 +805,8 @@
     "semantic_hash": ""
   },
   "api/[...path].ts": {
-    "mtime": 1784197496.3035336,
-    "ast_hash": "4cf830b9ce96a970d4e5bf95988461b3",
+    "mtime": 1784201667.8220255,
+    "ast_hash": "bd2edece602fad50aa57ee580f13ab26",
     "semantic_hash": ""
   },
   "backend/src/instrument.ts": {
@@ -850,8 +850,8 @@
     "semantic_hash": ""
   },
   "docs/AI_TAKEOVER.md": {
-    "mtime": 1784200323.7354014,
-    "ast_hash": "cfb595af9381a734148d5775276da82f",
+    "mtime": 1792243247.3082085,
+    "ast_hash": "c06ebcf2f9e6156c0fb6310aaceb13ba",
     "semantic_hash": ""
   },
   "frontend/public/brand/README.md": {
@@ -897,6 +897,181 @@
   "frontend/public/vetanflow-owner-workspace.png": {
     "mtime": 1784193236.3330173,
     "ast_hash": "65b685fd9ecb6e5286f7ba176ed1841c",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auth/employee-account-link.test.ts": {
+    "mtime": 1792241473.8786278,
+    "ast_hash": "898af554192e538b8c4163af612fa1d7",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/auth/employee-account-link.ts": {
+    "mtime": 1792241375.4027572,
+    "ast_hash": "325d31ebfc124a4b3d9fc53476cac543",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/demo/demo-router.test.ts": {
+    "mtime": 1792240875.716403,
+    "ast_hash": "1ee8e1e6d12e2847253b9f1343a72e89",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/demo/demo-router.ts": {
+    "mtime": 1792240875.708266,
+    "ast_hash": "414c76e9cd70305432b319d012c5b2e9",
+    "semantic_hash": ""
+  },
+  "backend/src/modules/hr/organization-preferences.test.ts": {
+    "mtime": 1792241658.8221076,
+    "ast_hash": "adda5a12f0f78bfb30ce3f2fe6f72703",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.architecture.json": {
+    "mtime": 1790538828.1403325,
+    "ast_hash": "f5c5e5fb3d7b11f0a293871b3e320a13",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.visual-check.json": {
+    "mtime": 1790538859.4620624,
+    "ast_hash": "9504c6e22a1cba57d19aacdf931794fa",
+    "semantic_hash": ""
+  },
+  "docs/vetanflow-knowledge-base/master.toc": {
+    "mtime": 1785578857.16661,
+    "ast_hash": "42e37430860bbef852aa6b2fa5e7d678",
+    "semantic_hash": ""
+  },
+  "docs/vetanflow-knowledge-base/parse_log.py": {
+    "mtime": 1785578748.238064,
+    "ast_hash": "02c16d8e18c31eb9c109350321d3f818",
+    "semantic_hash": ""
+  },
+  "frontend/src/WorkspaceApp.tsx": {
+    "mtime": 1792241432.6883757,
+    "ast_hash": "3eb69eb9949e64e6c8c9f82fdc0ba602",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/PayrollJourney.tsx": {
+    "mtime": 1792240875.6661503,
+    "ast_hash": "98c0608e4874cd988bf0984c969178b7",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/PeopleDirectory.tsx": {
+    "mtime": 1792240875.6529813,
+    "ast_hash": "ea6ff35937c3aec7427976802faa43c8",
+    "semantic_hash": ""
+  },
+  "frontend/src/demo/DemoAccessPage.tsx": {
+    "mtime": 1792240875.6837099,
+    "ast_hash": "28c403139f6354e41032a1f38f09588f",
+    "semantic_hash": ""
+  },
+  "frontend/src/demo/demo-emails.ts": {
+    "mtime": 1792240635.7495124,
+    "ast_hash": "05250167086dd93f17ccb4c4ad4e10b8",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/api-client.ts": {
+    "mtime": 1792240435.3552244,
+    "ast_hash": "e75e6dfa4376ce85f4c68ce5c3e6280d",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/download.ts": {
+    "mtime": 1792240509.0178452,
+    "ast_hash": "c31ec76712abc1c12d5ae09f34b21242",
+    "semantic_hash": ""
+  },
+  "scripts/check-demo-ui.mjs": {
+    "mtime": 1792241035.6705844,
+    "ast_hash": "308bd7013d63dda10faa3131b80472d6",
+    "semantic_hash": ""
+  },
+  "scripts/check-live-onboarding.ts": {
+    "mtime": 1792241586.4983633,
+    "ast_hash": "d0013a7439a584219e944843aecc6726",
+    "semantic_hash": ""
+  },
+  "scripts/show-demo-users.mjs": {
+    "mtime": 1792240875.7390883,
+    "ast_hash": "c5f33ef13bcce42adca9a4797281adf6",
+    "semantic_hash": ""
+  },
+  "scripts/start-demo.mjs": {
+    "mtime": 1792239670.681558,
+    "ast_hash": "dfa71525e03d0de995c6bedb2f30acfa",
+    "semantic_hash": ""
+  },
+  "Ultimate_Codebase_Reverse_Engineering_Prompt_v2.md": {
+    "mtime": 1785569240.848705,
+    "ast_hash": "336b3476a565dc278ae1c6e6e29b82aa",
+    "semantic_hash": ""
+  },
+  "docs/DEMO_GUIDE.md": {
+    "mtime": 1792243170.55032,
+    "ast_hash": "90674a3a82bc85d9c983ab1d3f74e86d",
+    "semantic_hash": ""
+  },
+  "docs/DEMO_USABILITY_AUDIT.md": {
+    "mtime": 1792243170.5710819,
+    "ast_hash": "ed2354c03adc5534c1cb143b7637165e",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.html": {
+    "mtime": 1790538838.5089486,
+    "ast_hash": "a35f5945b1130376f70bd5f373c1afab",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.visual-check.html": {
+    "mtime": 1790538859.4590778,
+    "ast_hash": "71fba45634277c371b8d59a3e4948c01",
+    "semantic_hash": ""
+  },
+  "docs/vetanflow-knowledge-base/master.pdf": {
+    "mtime": 1785578857.3075652,
+    "ast_hash": "239b4e591b4eda3153d64faaa5167e85",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.visual-check.1440x900.dark.png": {
+    "mtime": 1790538858.9191182,
+    "ast_hash": "f2dc491699d223c8f00b58116d702ca3",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.visual-check.1440x900.light.png": {
+    "mtime": 1790538856.9481614,
+    "ast_hash": "383ca98e0a7d93b44ffd93cca1838988",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.visual-check.2048x1320.dark.png": {
+    "mtime": 1790538859.443633,
+    "ast_hash": "405c558b8b014e3c1c07df6f25480b3d",
+    "semantic_hash": ""
+  },
+  "docs/architecture/vetanflow-runtime.visual-check.2048x1320.light.png": {
+    "mtime": 1790538858.2130165,
+    "ast_hash": "0dfcec696176a08ba1391439454419f0",
+    "semantic_hash": ""
+  },
+  "scripts/backup-legacy-inr-history.ts": {
+    "mtime": 1792242853.5148065,
+    "ast_hash": "3c4815b6cb3e1fbf3d74a635dd2706b8",
+    "semantic_hash": ""
+  },
+  "scripts/sql/rebuild-legacy-inr-history.sql": {
+    "mtime": 1792242853.5424461,
+    "ast_hash": "1716e48ae92a014864304d77f753ca32",
+    "semantic_hash": ""
+  },
+  "scripts/sql/repair-sample-attendance-snapshots.sql": {
+    "mtime": 1792243031.265247,
+    "ast_hash": "ef01feb62b91a92acafb7e843125731c",
+    "semantic_hash": ""
+  },
+  "scripts/sql/verify-inr-history.sql": {
+    "mtime": 1792243031.285873,
+    "ast_hash": "7c6a6f31c7886ec82199fd572d25c17a",
+    "semantic_hash": ""
+  },
+  "scripts/verify-inr-documents.ts": {
+    "mtime": 1792243069.698425,
+    "ast_hash": "a4f59946b8fc82e6fd3dd5256f0ab521",
     "semantic_hash": ""
   }
 }

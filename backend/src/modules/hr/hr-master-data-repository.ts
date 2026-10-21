@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { getSupabaseServiceClient, createSupabaseUserClient } from '../../lib/supabase.js'
 import { postgresUuidSchema } from '../../lib/validation.js'
 import { getUserRoles, hasAnyRole } from '../auth/roles.js'
+import { normalizeWorkEmail, resolveEmployeeProfile } from '../auth/employee-account-link.js'
 import { employees as fixtureEmployees, type AppRole } from '../employees/sample-data.js'
 
 type DataSource = 'fixture' | 'supabase'
@@ -68,6 +69,7 @@ export type AuditEntry = {
 
 export type HrMasterData = {
   auditEntries: AuditEntry[]
+  currentEmployeeId?: string | null
   currentUserRoles: AppRole[]
   departments: HrDepartment[]
   employees: HrEmployee[]
@@ -84,8 +86,9 @@ export type HrMasterData = {
 }
 
 export const organizationUpdateSchema = z.object({
-  countryCode: z.string().trim().length(2).transform((value) => value.toUpperCase()),
-  currencyCode: z.string().trim().length(3).transform((value) => value.toUpperCase()),
+  countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),
+  currencyCode: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/)
+    .refine((value) => Intl.supportedValuesOf('currency').includes(value), 'Choose a supported ISO currency'),
   locale: z
     .string()
     .trim()
@@ -133,7 +136,7 @@ export const departmentArchiveSchema = z.object({
 
 export const locationCreateSchema = z.object({
   city: z.string().min(2).max(120),
-  countryCode: z.string().length(2).default('US'),
+  countryCode: z.string().length(2).default('IN'),
   isActive: z.boolean().default(true),
   name: z.string().min(2).max(140),
   organizationId: postgresUuidSchema,
@@ -181,7 +184,7 @@ const employeeWriteSchema = z.object({
   organizationId: postgresUuidSchema,
   role: z.string().trim().min(2).max(120),
   status: z.enum(['draft', 'active', 'on_leave', 'exit_pending', 'inactive']).default('draft'),
-  workEmail: z.email(),
+  workEmail: z.string().trim().pipe(z.email()).transform(normalizeWorkEmail),
   workLocationId: postgresUuidSchema,
 })
 
@@ -366,12 +369,12 @@ export type HrMasterDataRepository = {
 }
 
 const fallbackOrganization = {
-  countryCode: 'US',
-  currencyCode: 'USD',
+  countryCode: 'IN',
+  currencyCode: 'INR',
   id: '00000000-0000-0000-0000-000000000001',
-  locale: 'en-US',
+  locale: 'en-IN',
   name: 'VetanFlow Labs',
-  timezone: 'America/New_York',
+  timezone: 'Asia/Kolkata',
 }
 
 const fallbackDepartments: HrDepartment[] = [
@@ -398,30 +401,30 @@ const fallbackDepartments: HrDepartment[] = [
 const fallbackLocations: HrLocation[] = [
   {
     id: '20000000-0000-0000-0000-000000000001',
-    city: 'New York',
-    countryCode: 'US',
+    city: 'Mumbai',
+    countryCode: 'IN',
     isActive: true,
-    name: 'New York HQ',
+    name: 'Mumbai HQ',
     organizationId: fallbackOrganization.id,
-    state: 'New York',
+    state: 'Maharashtra',
   },
   {
     id: '20000000-0000-0000-0000-000000000002',
-    city: 'Austin',
-    countryCode: 'US',
+    city: 'Pune',
+    countryCode: 'IN',
     isActive: true,
-    name: 'Austin Finance Office',
+    name: 'Pune Finance Office',
     organizationId: fallbackOrganization.id,
-    state: 'Texas',
+    state: 'Maharashtra',
   },
   {
     id: '20000000-0000-0000-0000-000000000003',
-    city: 'Seattle',
-    countryCode: 'US',
+    city: 'Bengaluru',
+    countryCode: 'IN',
     isActive: true,
-    name: 'Seattle Operations Hub',
+    name: 'Bengaluru Operations Hub',
     organizationId: fallbackOrganization.id,
-    state: 'Washington',
+    state: 'Karnataka',
   },
 ]
 
@@ -657,18 +660,20 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
       const profileResult = await supabase
         .from('profiles')
         .select('id, organization_id, organizations(id, name, country_code, currency_code, locale, timezone)')
-        .single()
+        .maybeSingle()
 
       if (profileResult.error) {
         throw profileResult.error
       }
 
       const earlyProfile = profileResult.data as ProfileRow | null
+      if (!earlyProfile?.organization_id) throw new HrMasterDataWriteError(403, 'This account has no organization workspace. Use a current demo account or contact the organization owner.')
 
       const rolesResult = await supabase
         .from('user_roles')
         .select('role')
         .eq('organization_id', earlyProfile?.organization_id ?? '')
+        .eq('user_id', earlyProfile.id)
         .order('role')
 
       if (rolesResult.error) {
@@ -745,6 +750,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
             ? ((auditResult.data ?? []) as AuditRow[]).map(toAuditEntry)
             : [],
           currentUserRoles,
+          currentEmployeeId: ownEmployeeIds.values().next().value ?? null,
           departments: ((departmentsResult.data ?? []) as DepartmentRow[]).map(toDepartment),
           employees: visibleEmployees,
           locations: ((locationsResult.data ?? []) as LocationRow[]).map(toLocation),
@@ -775,6 +781,16 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
 
       if (!(await canWrite(actorUserId, input.organizationId, ['owner', 'admin']))) {
         return { status: 'forbidden' }
+      }
+
+      const current = await supabase.from('organizations').select('currency_code').eq('id', input.organizationId).maybeSingle()
+      if (current.error) throw current.error
+      if (current.data && current.data.currency_code !== input.currencyCode) {
+        const runs = await supabase.from('payroll_runs').select('id').eq('organization_id', input.organizationId).limit(1)
+        if (runs.error) throw runs.error
+        if (runs.data?.length) {
+          throw new HrMasterDataWriteError(409, 'Currency cannot change after payroll has been created. Use a separate organization for a different currency.')
+        }
       }
 
       const { data, error } = await supabase
@@ -837,6 +853,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
       }
 
       const { location } = await requireWritableEmployeeReferences(supabase, input)
+      const profileId = await resolveEmployeeProfile(supabase, input.organizationId, input.workEmail)
 
       const { data, error } = await supabase
         .from('employees')
@@ -853,6 +870,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
           joining_date: input.joiningDate,
           location,
           organization_id: input.organizationId,
+          profile_id: profileId,
           status: input.status,
           work_email: input.workEmail,
           work_location_id: input.workLocationId,
@@ -1371,6 +1389,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
       }
 
       const { location } = await requireWritableEmployeeReferences(supabase, input)
+      const profileId = await resolveEmployeeProfile(supabase, input.organizationId, input.workEmail, employeeId, existing.profile_id)
 
       const { data, error } = await supabase
         .from('employees')
@@ -1385,6 +1404,7 @@ export function createHrMasterDataRepository(): HrMasterDataRepository {
           full_name: input.fullName,
           joining_date: input.joiningDate,
           location,
+          profile_id: profileId,
           status: input.status,
           updated_at: new Date().toISOString(),
           work_email: input.workEmail,

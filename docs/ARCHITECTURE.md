@@ -70,10 +70,13 @@ Public routes render without an Auth requirement. `/login` handles both new sign
 1. No session: show email/password sign-in.
 2. Existing session: show the current email with Continue or Use another account.
 3. Use another account: local-scope sign-out, then clean sign-in.
-4. Successful sign-in: redirect to `/app`.
-5. `/app`: load the user's roles and render the correct workspace.
+4. Password sign-in uses an isolated, nonpersistent Auth client. `/api/auth/workspace` verifies that candidate token and resolves the exact user's organization and roles before installing the shared browser session.
+5. Failed password or workspace validation leaves an existing valid session unchanged. Old unassigned `.test` identities return `403`, never an assumed role.
+6. `/app` renders only master data belonging to the current session. Token/request-version guards discard stale responses from earlier accounts; newer Auth events take priority over initial session restoration.
 
 This prevents a stored owner session from silently redirecting every attempted login back to the owner workspace.
+
+All `/api` responses use `Cache-Control: no-store`. A stored browser session is shared across tabs, so switching accounts in one tab changes the active identity in the others. Use separate browser profiles for simultaneous independent accounts.
 
 ## Core Domains
 

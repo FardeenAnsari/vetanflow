@@ -5,8 +5,8 @@ const optionalUrl = z.preprocess((value) => (value === '' ? undefined : value), 
 
 const envSchema = z.object({
   NODE_ENV: z.string().default('development'),
-  PAYROLL_CURRENCY: z.string().length(3).default('USD'),
-  PAYROLL_LOCALE: z.string().default('en-US'),
+  PAYROLL_CURRENCY: z.string().length(3).default('INR'),
+  PAYROLL_LOCALE: z.string().default('en-IN'),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   SENTRY_DSN: optionalUrl,

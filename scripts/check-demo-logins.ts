@@ -5,6 +5,7 @@ import WebSocket from 'ws'
 
 type DemoCredential = {
   email: string
+  employeeCode?: string
   fullName: string
   password: string
   role: 'owner' | 'admin' | 'hr' | 'finance' | 'manager' | 'employee'
@@ -60,6 +61,14 @@ if (!existsSync(credentialsPath)) {
 const credentials = (JSON.parse(readFileSync(credentialsPath, 'utf8')) as { users: DemoCredential[] }).users
 const results: Array<{ employees: number; idCards: string; leaveRequests: number; payslips: number; payrollRuns: number; role: string }> = []
 let ownerVisibleEmployeeIds: string[] = []
+let ownerRunId: string | undefined
+
+for (const authorization of [undefined, 'Bearer invalid-demo-token']) {
+  const response = await fetch(`${apiBaseUrl}/api/hr/master-data`, {
+    headers: authorization ? { Authorization: authorization } : {},
+  })
+  if (response.status !== 401) throw new Error(`Unauthenticated access returned ${response.status}, expected 401`)
+}
 
 for (const credential of credentials) {
   const client = createClient(supabaseUrl, publishableKey, {
@@ -76,21 +85,38 @@ for (const credential of credentials) {
   }
 
   const token = data.session.access_token
-  const [masterData, leaveData, payrollData, payslipData] = await Promise.all([
+  const [masterData, leaveData, payrollData, payslipData, workspaceData] = await Promise.all([
     getJson(`${apiBaseUrl}/api/hr/master-data`, token),
     getJson(`${apiBaseUrl}/api/leave/dashboard`, token),
     getJson(`${apiBaseUrl}/api/payroll/runs`, token),
     getJson(`${apiBaseUrl}/api/payroll/payslips`, token),
+    getJson(`${apiBaseUrl}/api/auth/workspace`, token),
   ])
   const returnedRoles = masterData.data.currentUserRoles as string[]
+  if (workspaceData.data.userId !== data.user.id
+    || workspaceData.data.organizationId !== masterData.data.organization.id
+    || workspaceData.data.roles.length !== 1
+    || workspaceData.data.roles[0] !== credential.role) {
+    throw new Error(`${credential.role} workspace validation returned a mismatched identity or role`)
+  }
+  if (masterData.data.organization?.currencyCode !== 'INR' || masterData.data.organization?.countryCode !== 'IN') {
+    throw new Error('Expected the Indian organization and INR payroll currency')
+  }
   const visibleEmployees = masterData.data.employees as Array<{ id: string }>
 
   if (returnedRoles.length !== 1 || returnedRoles[0] !== credential.role) {
     throw new Error(`${credential.role} returned unexpected roles: ${returnedRoles.join(', ')}`)
   }
+  if (credential.employeeCode && !masterData.data.currentEmployeeId) {
+    throw new Error(`${credential.role} is not linked to a personal employee record`)
+  }
+  if (credential.role === 'employee' && visibleEmployees.length !== 1) {
+    throw new Error('Employee workspace must contain exactly the signed-in employee')
+  }
 
   if (credential.role === 'owner') {
     ownerVisibleEmployeeIds = visibleEmployees.map((employee) => employee.id)
+    ownerRunId = payrollData.data.runs[0]?.id
   }
 
   const ownCardEmployeeId = visibleEmployees[0]?.id
@@ -122,6 +148,10 @@ for (const credential of credentials) {
   }
 
   if (credential.role === 'employee' && ownCardEmployeeId) {
+    if (ownerRunId) {
+      const exportResponse = await fetch(`${apiBaseUrl}/api/payroll/runs/${ownerRunId}/exports/bank`, { headers: { Authorization: `Bearer ${token}` } })
+      if (![403, 404].includes(exportResponse.status)) throw new Error(`Employee could access a bank export: ${exportResponse.status}`)
+    }
     const crossEmployeeId = ownerVisibleEmployeeIds.find((employeeId) => employeeId !== ownCardEmployeeId)
 
     if (crossEmployeeId) {
@@ -146,7 +176,7 @@ for (const credential of credentials) {
     role: credential.role,
   })
 
-  await client.auth.signOut()
+  await client.auth.signOut({ scope: 'local' })
 }
 
 console.log('VetanFlow role login and visibility check')

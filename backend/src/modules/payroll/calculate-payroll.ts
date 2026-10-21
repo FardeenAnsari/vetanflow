@@ -15,6 +15,9 @@ export const payrollInputSchema = z.object({
   preTaxDeductionAmount: z.number().nonnegative().default(0),
   postTaxDeductionAmount: z.number().nonnegative().default(0),
   withholdingTaxAmount: z.number().nonnegative().default(0),
+}).refine((input) => input.unpaidLeaveDays <= input.payableDays, {
+  message: 'Unpaid leave cannot exceed the days in the payroll period',
+  path: ['unpaidLeaveDays'],
 })
 
 export type PayrollInput = z.input<typeof payrollInputSchema>

@@ -351,3 +351,41 @@ Definition of done:
 - The live showcase fills the major workflows with six months of coherent records.
 - API, database, documents, and role scopes pass automated and live checks.
 - A new AI model or engineer can resume from one authoritative document without reading the full conversation history.
+
+## Phase 10 - Usability, Onboarding, And INR Sample Integrity
+
+Status: Complete (2026-10-17)
+
+Goal: simplify the real operational experience, connect account and employee creation, and replace inconsistent historical samples with verified INR data.
+
+Completed:
+- Lazy route loading, explicit employee sections, personal self-service for operational roles, searchable/paginated directory, automatic payroll detail, and state-appropriate controls.
+- Session/error recovery, request timeouts, local-only sign-out checks, reliable file downloads, malformed JSON 400, and oversized JSON 413.
+- Organization-scoped normalized-email account linking in either creation order, conflict checks, and protection against cross-organization profile assignment.
+- Stronger organization currency validation, payroll currency locking, snapshot currency/locale, and impossible leave-day rejection.
+- 24 Indian employee records, 12 real role accounts, four Indian offices, INR/en-IN/Asia/Kolkata preferences, 24 leave records, and current attendance.
+- Explicitly approved January-June synthetic-history replacement after record and 54-PDF backups. Preserved users, employee IDs, leave records, and newer monetary totals.
+- Nine finalized INR periods, 198 payroll lines/payslips, 27 adjustments, 72 salary revisions, and 6,270 attendance records.
+- Corrected sample attendance summaries and refreshed all current PDFs; old unreferenced cloud PDFs remain private unless deletion is separately approved.
+- Passed 87 tests, lint, typechecks, builds, 15 readiness checks, all 12 role accounts, live onboarding, desktop/mobile navigation, and actual PDF/CSV downloads.
+- Direct SQL verified history arithmetic, attendance, identity, publication, maker/checker, RLS, private buckets, and active protection triggers.
+
+Boundaries:
+- No commit, push, or redeployment for this batch.
+- Management advisors, invitation delivery, restore testing, concurrency constraints, statutory compliance, and independent security review are not certified by these checks.
+- The one-time synthetic maintenance scripts are not production payroll correction tools.
+
+Next: Phase 11 - Hosted Operations And Remaining Hardening.
+
+## Post-Phase Maintenance - October 20, 2026
+
+Status: Login repair and requested push preparation complete; Phase 11 not complete.
+
+- Candidate-session workspace validation, explicit unassigned-account handling, stale-response guards, cross-tab switching, and real document reload recovery.
+- Added no-store API headers, credential/build/history checks with regression coverage, and dependency/history gates in CI.
+- Updated current handoff, architecture, deployment, demo, README, and release/security documentation without changing the historical phase evidence.
+- Fresh Supabase checks: 16 RLS tables, no anonymous table privileges or direct authenticated writes, private buckets; one leaked-password warning and informational unused-index advice.
+- 103 tests, lint, typechecks, builds, readiness checks, and all 12 role accounts passed. No commit, push, or deployment performed.
+- The separately approved cleanup of 54 obsolete backed-up cloud PDFs is complete; all 198 current PDFs were retained.
+
+See `docs/RELEASE_READINESS.md` before the source commit or hosted rollout. Graphify remains the phase-level snapshot; it was queried, not rebuilt, for this maintenance slice.

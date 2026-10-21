@@ -21,6 +21,7 @@ import { blogArticles, journeySteps, roleStories, trustSignals } from './content
 import { WorkflowTour } from './WorkflowTour'
 
 const navItems = [
+  { href: '/demo', label: 'Demo workspaces' },
   { href: '/tour', label: 'Product tour' },
   { href: '/how-it-works', label: 'How it works' },
   { href: '/blog', label: 'Journal' },
@@ -147,8 +148,8 @@ function LandingPage() {
                 Move from employee setup to approved payroll, private payslips, and finance exports with a role-aware operating trail.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-50" href="/tour">
-                  Walk through the workflow
+                <a className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-blue-50" href="/demo">
+                  Open a demo workspace
                   <ArrowRight size={17} aria-hidden="true" />
                 </a>
                 <a className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/8 px-5 text-sm font-semibold text-white transition hover:bg-white/14" href="/login">

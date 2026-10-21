@@ -99,12 +99,13 @@ for (const bucketId of ['employee-photos', 'payslips']) {
   }
 }
 
+const organizationId = process.env.DEMO_ORGANIZATION_ID ?? '00000000-0000-0000-0000-000000000001'
 const organizations = await query(
   'organizations',
-  supabase.from('organizations').select('id,name').order('created_at', { ascending: true }),
+  supabase.from('organizations').select('id,name,currency_code,locale').eq('id', organizationId),
 )
 const organization = firstRow(organizations ?? [], 'Organization')
-const organizationId = process.env.DEMO_ORGANIZATION_ID ?? organization.id
+if (organization.name !== 'VetanFlow Labs') throw new Error('Demo preparation requires the VetanFlow Labs sample organization.')
 
 const roles = await query(
   'user_roles',
@@ -157,8 +158,8 @@ for (const [index, employee] of employees.entries()) {
     .update({
       bank_account_holder_name: employee.bank_account_holder_name ?? employee.full_name,
       bank_account_number: employee.bank_account_number ?? `9000000000${String(index + 1).padStart(4, '0')}`,
-      bank_routing_code: employee.bank_routing_code ?? String(21_000_021 + index).padStart(9, '0'),
-      bank_name: employee.bank_name ?? 'VetanFlow Demo Bank',
+      bank_routing_code: employee.bank_routing_code ?? 'HDFC0001234',
+      bank_name: employee.bank_name ?? 'HDFC Bank (sample account)',
     })
     .eq('id', employee.id)
 
@@ -183,27 +184,24 @@ if (existingLockBeforeAttendance.error) {
 let attendanceEntriesCreated = 0
 
 if (!existingLockBeforeAttendance.data) {
-  const demoDates = [
-    period.startDate,
-    new Date(Date.UTC(new Date(`${period.startDate}T00:00:00.000Z`).getUTCFullYear(), new Date(`${period.startDate}T00:00:00.000Z`).getUTCMonth(), 2))
-      .toISOString()
-      .slice(0, 10),
-    new Date(Date.UTC(new Date(`${period.startDate}T00:00:00.000Z`).getUTCFullYear(), new Date(`${period.startDate}T00:00:00.000Z`).getUTCMonth(), 3))
-      .toISOString()
-      .slice(0, 10),
-  ]
+  const start = new Date(`${period.startDate}T00:00:00.000Z`)
+  const demoDates = Array.from({ length: period.calendarDays }, (_, index) =>
+    new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), index + 1)).toISOString().slice(0, 10),
+  )
+  const firstWeekdayIndex = demoDates.findIndex((day) => ![0, 6].includes(new Date(`${day}T00:00:00.000Z`).getUTCDay()))
   const attendanceRows = employees.flatMap((employee, employeeIndex) =>
     demoDates.map((workDate, dateIndex) => {
-      const isHalfDay = employeeIndex === 0 && dateIndex === 1
-      const hasOvertime = employeeIndex === 2 && dateIndex === 2
+      const isWeeklyOff = [0, 6].includes(new Date(`${workDate}T00:00:00.000Z`).getUTCDay())
+      const isHalfDay = employeeIndex === 0 && dateIndex === firstWeekdayIndex
+      const hasOvertime = employeeIndex === 2 && dateIndex === firstWeekdayIndex
 
       return {
-        attendance_status: isHalfDay ? 'half_day' : 'present',
+        attendance_status: isWeeklyOff ? 'weekly_off' : isHalfDay ? 'half_day' : 'present',
         employee_id: employee.id,
         notes: 'Prepared by demo readiness script',
         organization_id: organizationId,
         overtime_hours: hasOvertime ? 2 : 0,
-        payable_hours: isHalfDay ? 4 : 8,
+        payable_hours: isWeeklyOff ? 0 : isHalfDay ? 4 : 8,
         recorded_by: makerRole.user_id,
         updated_at: new Date().toISOString(),
         work_date: workDate,
@@ -380,7 +378,12 @@ if (!existingLines?.length) {
 
   const lineInserts = employees.map((employee, index) => {
     const lossOfPayDays = index === 0 ? 0.5 : 0
-    const overtimeAmount = index === 2 ? 1200 : 0
+    const overtimeHours = index === 2 ? 2 : 0
+    const overtimeAmount = Number(employee.annual_compensation) / 12 / period.calendarDays / 8 * overtimeHours * 1.5
+    const monthStart = new Date(`${period.startDate}T00:00:00.000Z`)
+    const weeklyOffDays = Array.from({ length: period.calendarDays }, (_, day) =>
+      new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), day + 1)).getUTCDay(),
+    ).filter((day) => day === 0 || day === 6).length
     const employeeAdjustments = seededAdjustments.filter((adjustment: any) => adjustment.employee_id === employee.id)
     const reimbursementAmount = employeeAdjustments
       .filter((adjustment: any) => adjustment.component_type === 'reimbursement')
@@ -417,6 +420,7 @@ if (!existingLines?.length) {
       updatedAt: adjustment.updated_at,
     }))
     const snapshot = {
+      money: { currencyCode: organization.currency_code, locale: organization.locale },
       adjustments: {
         items: adjustmentItems,
         netImpact: adjustmentNetImpact,
@@ -436,10 +440,10 @@ if (!existingLines?.length) {
         holidays: 0,
         lossOfPayDays,
         paidLeaveDays: 0,
-        payableDays: period.calendarDays - lossOfPayDays,
-        presentDays: period.calendarDays - lossOfPayDays,
+        payableDays: period.calendarDays - weeklyOffDays - lossOfPayDays,
+        presentDays: period.calendarDays - weeklyOffDays - lossOfPayDays,
         unpaidLeaveDays: 0,
-        weeklyOffDays: 0,
+        weeklyOffDays,
       },
       employee: {
         code: employee.employee_code,
@@ -448,7 +452,7 @@ if (!existingLines?.length) {
       },
       overtime: {
         amount: overtimeAmount,
-        hours: overtimeAmount ? 4 : 0,
+        hours: overtimeHours,
         multiplier: 1.5,
       },
       payroll,

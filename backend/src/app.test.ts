@@ -1,16 +1,39 @@
 import request from 'supertest'
+import express from 'express'
 import { describe, expect, it } from 'vitest'
 import { createApp } from './app.js'
+import { createHrRouter } from './routes/hr.js'
+import { createHrMasterDataRepository } from './modules/hr/hr-master-data-repository.js'
 
 const app = createApp()
 
 describe('app', () => {
+  it('does not open a cloud workspace without an assigned role', async () => {
+    const repository = createHrMasterDataRepository()
+    const fixture = await repository.list()
+    const isolatedApp = express()
+    isolatedApp.use('/api/hr', createHrRouter({
+      ...repository,
+      list: async () => ({ source: 'supabase', data: { ...fixture.data, currentUserRoles: [] } }),
+    }))
+    const response = await request(isolatedApp).get('/api/hr/master-data').expect(403)
+    expect(response.body.error).toContain('No workspace role')
+  })
+  it('returns a useful client error for malformed JSON', async () => {
+    const response = await request(app).post('/api/employees').set('Content-Type', 'application/json').send('{invalid').expect(400)
+    expect(response.body.error).toBe('Invalid JSON request body')
+  })
+
+  it('rejects oversized bodies with a payload-too-large response', async () => {
+    await request(app).post('/api/employees').send({ value: 'x'.repeat(110_000) }).expect(413)
+  })
   it('adds security and rate-limit headers to API responses', async () => {
     const response = await request(app).get('/api/employees')
 
     expect(response.headers['x-content-type-options']).toBe('nosniff')
     expect(response.headers.ratelimit).toBeTruthy()
     expect(response.headers['x-powered-by']).toBeUndefined()
+    expect(response.headers['cache-control']).toBe('no-store')
   })
 
   it('returns health status', async () => {

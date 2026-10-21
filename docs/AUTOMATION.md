@@ -7,7 +7,8 @@ VetanFlow automation keeps local development, the live Supabase showcase, docume
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | start Express and Vite together |
-| `npm run verify` | lint, typecheck, 62 backend tests, frontend build, backend build |
+| `npm run verify` | secret checks, lint, typecheck, 103 scanner/backend/frontend tests, both builds |
+| `npm run security:check -- --history` | scan current source/build assets and reachable Git history without printing secrets |
 | `npm run deploy:check` | validate deployment files, scripts, and environment examples |
 | `npm run demo:seed-showcase` | create/update 12 Auth accounts and operational foundation |
 | `npm run demo:prepare` | prepare one payroll month, previous month by default |
@@ -26,13 +27,12 @@ VetanFlow automation keeps local development, the live Supabase showcase, docume
 
 `npm run verify` executes, in order:
 
-1. frontend Oxlint
-2. backend TypeScript lint check
-3. frontend strict typecheck
-4. backend strict typecheck
-5. Vitest backend suite
-6. Vite production build
-7. backend TypeScript production build
+1. source/build credential and secret-format scan
+2. frontend Oxlint and backend TypeScript lint check
+3. frontend/backend strict typechecks
+4. Node secret-scanner regressions, Vitest backend suite, and Vitest frontend auth suite
+5. Vite and backend TypeScript production builds
+6. repeated source/browser-build secret scan
 
 Run `npm run deploy:check` after deployment configuration changes. Run `npm audit --audit-level=moderate` and Supabase database lint at security or release milestones.
 
@@ -40,7 +40,7 @@ Run `npm run deploy:check` after deployment configuration changes. Run `npm audi
 
 `scripts/bootstrap-showcase.mjs` is the main idempotent showcase orchestrator:
 
-1. `demo:seed-showcase` creates or updates the 12 accounts and ten-employee foundation.
+1. `demo:seed-showcase` creates or updates the 12 accounts and 24-employee Indian foundation.
 2. It invokes `demo:prepare` for calendar offsets `-6` through `-1`.
 3. Each month gets attendance, a lock, adjustments, finalized payroll lines, and payslips.
 4. `demo:check` validates required live data.
@@ -63,9 +63,9 @@ Use `demo:bootstrap` for ordinary repair. Use `demo:reset` only when deleting sh
 
 ## GitHub Actions And Hooks
 
-`.github/workflows/ci.yml` runs `npm ci` and `npm run verify` on pushes to `main` and pull requests. It uses read-only contents permission, cancels superseded branch runs, and runs on Node 24.
+`.github/workflows/ci.yml` runs `npm ci` and `npm run verify` on pushes to `main` and pull requests, then scans fully fetched Git history and runs `npm audit --audit-level=moderate`. It uses read-only contents permission, cancels superseded branch runs, and runs on Node 24. Cloud/demo credentials are not supplied to ordinary CI.
 
-The Husky pre-commit hook refreshes the Handoff snapshot and runs lint-staged. The project-level verification remains intentionally strict because payroll, authorization, and generated documents share cross-module contracts.
+The Husky pre-commit hook runs `npm run verify`. It does not regenerate the Handoff or Graphify on every commit. The project-level verification remains intentionally strict because payroll, authorization, and generated documents share cross-module contracts.
 
 ## Supabase Workflow
 
